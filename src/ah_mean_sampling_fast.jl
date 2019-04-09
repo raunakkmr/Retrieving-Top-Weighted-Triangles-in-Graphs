@@ -69,25 +69,23 @@ function compute_weighted_triangles(n::Int64,
         modified_u /= (degrees[b]-1)
         b_index = searchsorted(a_nbrs, b)[1]
         index = searchsortedfirst(nbr_prefix[a], modified_u)
-        if a_nbrs[index] != b
+        if b_index == 1
+            index = searchsortedfirst(nbr_prefix[a][2:end], modified_u-nbr_prefix[a][1])
+            c = a_nbrs[1+index]
+        elseif b_index == degrees[a]
+            index = searchsortedfirst(nbr_prefix[a][1:end-1], modified_u)
             c = a_nbrs[index]
         else
-            if b_index == 1
-                index = searchsortedfirst(nbr_prefix[a][2:end], modified_u-nbr_prefix[a][1])
-                c = a_nbrs[1+index]
-                c = a_nbrs[rand(2:end)]
-            elseif b_index == degrees[a]
-                index = searchsortedfirst(nbr_prefix[a][1:end-1], modified_u-nbr_prefix[a][1])
+            p = nbr_prefix[a][b_index-1] / nbr_z[a]
+            coin_flip = rand(Bernoulli(p))
+            if coin_flip == 1
+                index = searchsortedfirst(nbr_prefix[a][1:b_index-1], 
+                                          modified_u)
                 c = a_nbrs[index]
-                c = a_nbrs[rand(1:end-1)]
             else
-                p = nbr_prefix[a][b_index-1] / nbr_z[a]
-                coin_flip = rand(Bernoulli(p))
-                if coin_flip == 1
-                    c = a_nbrs[rand(1:b_index-1)]
-                else
-                    c = a_nbrs[rand(b_index+1:end)]
-                end
+                index = searchsortedfirst(nbr_prefix[a][1:b_index-1], 
+                                          modified_u-nbr_prefix[a][b_index])
+                c = a_nbrs[b_index+index]
             end
         end
 
