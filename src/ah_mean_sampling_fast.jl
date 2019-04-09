@@ -70,10 +70,12 @@ function compute_weighted_triangles(n::Int64,
         b_index = searchsorted(a_nbrs, b)[1]
         index = searchsortedfirst(nbr_prefix[a], modified_u)
         if b_index == 1
-            index = searchsortedfirst(nbr_prefix[a][2:end], modified_u-nbr_prefix[a][1])
+            index = searchsortedfirst(nbr_prefix[a][2:end],     
+                                      modified_u-nbr_prefix[a][1])
             c = a_nbrs[1+index]
         elseif b_index == degrees[a]
-            index = searchsortedfirst(nbr_prefix[a][1:end-1], modified_u)
+            index = searchsortedfirst(nbr_prefix[a][1:end-1],
+                                      modified_u)
             c = a_nbrs[index]
         else
             p = nbr_prefix[a][b_index-1] / nbr_z[a]
@@ -83,7 +85,7 @@ function compute_weighted_triangles(n::Int64,
                                           modified_u)
                 c = a_nbrs[index]
             else
-                index = searchsortedfirst(nbr_prefix[a][1:b_index-1], 
+                index = searchsortedfirst(nbr_prefix[a][b_index+1:end], 
                                           modified_u-nbr_prefix[a][b_index])
                 c = a_nbrs[b_index+index]
             end
@@ -95,23 +97,25 @@ function compute_weighted_triangles(n::Int64,
         modified_u -= (adj_list.weights[a,c] + adj_list.weights[a,b])
         a_index = searchsorted(b_nbrs, a)[1]
         index = searchsortedfirst(nbr_prefix[b], modified_u)
-        if b_nbrs[index] != a
+        if a_index == 1
+            index = searchsortedfirst(nbr_prefix[b][2:end], 
+                                      modified_u-nbr_prefix[b][1])
+            cprime = b_nbrs[1+index]
+        elseif a_index == degrees[b]
+            index = searchsortedfirst(nbr_prefix[b][1:end-1], 
+                                      modified_u)
             cprime = b_nbrs[index]
         else
-            if a_index == 1
-                index = searchsortedfirst(nbr_prefix[b][2:end], modified_u-nbr_prefix[b][1])
-                cprime = b_nbrs[1+index]
-            elseif a_index == degrees[b]
-                index = searchsortedfirst(nbr_prefix[b][1:end-1], modified_u-nbr_prefix[b][1])
+            p = nbr_prefix[b][a_index-1] / nbr_z[b]
+            coin_flip = rand(Bernoulli(p))
+            if coin_flip == 1
+                index = searchsortedfirst(nbr_prefix[b][1:a_index-1], 
+                                          modified_u)
                 cprime = b_nbrs[index]
             else
-                p = nbr_prefix[b][a_index-1] / nbr_z[b]
-                coin_flip = rand(Bernoulli(p))
-                if coin_flip == 1
-                    cprime = b_nbrs[rand(1:a_index-1)]
-                else
-                    cprime = b_nbrs[rand(a_index+1:end)]
-                end
+                index = searchsortedfirst(nbr_prefix[b][a_index+1:end], 
+                                          modified_u-nbr_prefix[b][a_index])
+                cprime = b_nbrs[a_index+index]
             end
         end
 
