@@ -14,9 +14,9 @@ function construct_samplers(n::Int64, edge_list::Array, adj_list::SimpleWeighted
     edge_weights = []
     for ((a,b),w) in edge_list
         a_nbrs = neighbors(adj_list, a)
-        a_nbrs_weights = pweights(adj_list.weights[a, filter(e->e!=b, a_nbrs)])
+        a_nbrs_weights = adj_list.weights[a, filter(e->e!=b, a_nbrs)]
         b_nbrs = neighbors(adj_list, b)
-        b_nbrs_weights = pweights(adj_list.weights[b, filter(e->e!=a, b_nbrs)])
+        b_nbrs_weights = adj_list.weights[b, filter(e->e!=a, b_nbrs)]
         push!(edge_weights, w * sum(a_nbrs_weights) * sum(b_nbrs_weights))
     end
     Z = sum(edge_weights)

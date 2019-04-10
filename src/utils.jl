@@ -46,8 +46,8 @@ function get_edge_list(ex::HONData, inverse::Bool=false, weighted::Bool=true)
                     elseif weighted
                         edges[edge] += 1
                     end
-                    push!(vertices, vertex_id[v_i])
-                    push!(vertices, vertex_id[v_j])
+                    push!(vertices, u)
+                    push!(vertices, v)
                 end
             end
             idx += nvert
@@ -57,7 +57,7 @@ function get_edge_list(ex::HONData, inverse::Bool=false, weighted::Bool=true)
     n = length(vertices)
     edge_list = collect(edges)
     if inverse
-        edge_list = [((a,b),1.0/w) for ((a,b),w) in edge_list]
+        edge_list = [(e,1.0/w) for (e,w) in edge_list]
     end
 
     return n, edge_list

@@ -15,16 +15,15 @@ function construct_samplers(n::Int64, edge_list::Array, adj_list::SimpleWeighted
     nbr_weights = [adj_list.weights[v, neighbors(adj_list, v)] for v in vertices(adj_list)]
     nbr_prefix = [[sum(@views weight[1:i]) for i in range(1, stop=length(weight))] for weight in nbr_weights]
     nbr_z = [sum(weights) for weights in nbr_weights]
-    nbr_prefix_z = [sum(prefix) for prefix in nbr_prefix]
 
     # Construct a sampler for sampling edge weights.
     # edge_weights = [w for (_,w) in edge_list]
     edge_weights = []
     for ((a,b),w) in edge_list
         a_nbrs = neighbors(adj_list, a)
-        a_nbrs_weights = pweights(adj_list.weights[a, filter(e->e!=b, a_nbrs)])
+        a_nbrs_weights = adj_list.weights[a, filter(e->e!=b, a_nbrs)]
         b_nbrs = neighbors(adj_list, b)
-        b_nbrs_weights = pweights(adj_list.weights[b, filter(e->e!=a, b_nbrs)])
+        b_nbrs_weights = adj_list.weights[b, filter(e->e!=a, b_nbrs)]
         wt = (degrees[a]-1)*(degrees[b]-1)*w
         wt += (degrees[b]-1)*sum(a_nbrs_weights)
         wt += (degrees[a]-1)*sum(b_nbrs_weights)
@@ -34,7 +33,7 @@ function construct_samplers(n::Int64, edge_list::Array, adj_list::SimpleWeighted
     edge_prob = Categorical(edge_weights ./ Z)
     edge_sampler = sampler(edge_prob)
 
-    return degrees, edge_sampler, nbr_weights, nbr_prefix, nbr_z, nbr_prefix_z, Z
+    return degrees, edge_sampler, nbr_weights, nbr_prefix, nbr_z, Z
 end
 
 function compute_weighted_triangles(n::Int64,
@@ -47,7 +46,6 @@ function compute_weighted_triangles(n::Int64,
                                     nbr_weights::Array,
                                     nbr_prefix::Array,
                                     nbr_z::Array,
-                                    nbr_prefix_z::Array,
                                     degrees::Array)
     s = 1000000  # Number of samples.
     x = Dict()  # Counters.
@@ -148,8 +146,8 @@ function construct_and_compute(n::Int64,
                                k::Int64,
                                edge_list::Array)
     adj_list = get_adj_list(n, edge_list)
-    degrees, edge_sampler, nbr_weights, nbr_prefix, nbr_z, nbr_prefix_z, Z = construct_samplers(n, edge_list, adj_list)
-    triangles = compute_weighted_triangles(n, kprime, k, Z, edge_list, adj_list, edge_sampler, nbr_weights, nbr_prefix, nbr_z, nbr_prefix_z, degrees)
+    degrees, edge_sampler, nbr_weights, nbr_prefix, nbr_z, Z = construct_samplers(n, edge_list, adj_list)
+    triangles = compute_weighted_triangles(n, kprime, k, Z, edge_list, adj_list, edge_sampler, nbr_weights, nbr_prefix, nbr_z, degrees)
 
     return triangles
 end
