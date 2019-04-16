@@ -21,7 +21,7 @@ function read_txt_data(dataset::String)
 end
 
 """Gather the edges that exist in the projected graph."""
-function get_edge_list(ex::HONData, inverse::Bool=false, weighted::Bool=true)
+function get_edge_list(ex::HONData, p::Float64=1, weighted::Bool=true)
     edges, vertices, vertex_id = Dict(), Set(), Dict()
     let idx = 0
         for nvert in ex.nverts
@@ -56,9 +56,7 @@ function get_edge_list(ex::HONData, inverse::Bool=false, weighted::Bool=true)
 
     n = length(vertices)
     edge_list = collect(edges)
-    if inverse
-        edge_list = [(e,1.0/w) for (e,w) in edge_list]
-    end
+    edge_list = [(e, w^p) for (e, w) in edge_list]
 
     return n, edge_list
 end

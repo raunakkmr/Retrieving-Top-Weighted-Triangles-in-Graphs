@@ -51,7 +51,7 @@ function main()
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
 
-    n, edge_list = get_edge_list(ex, mode=="h")
+    n, edge_list = get_edge_list(ex, mode == "a" ? 1.0 : -1.0)
     time = @elapsed triangles = construct_and_compute(n, edge_list)
     writedlm(output_file, triangles)
     write(open(output_file, "a"), "Time: $time")
