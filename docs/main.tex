@@ -7,7 +7,7 @@
 \setlist[todolist]{label=$\square$}
 \usepackage{pifont}
 \usepackage[margin=1in]{geometry}
-\usepackage[autostyle=true,german=quotes]{csquotes}
+% \usepackage[autostyle=true,german=quotes]{csquotes}
 
 \usepackage{mathrsfs}
 \usepackage{mathtools}
@@ -371,6 +371,8 @@ weights instead.
 
 \subsection{Algorithm}
 
+\subsubsection{Approach 1}
+
 One approach could be to reduce this problem to the one for 
 geometric mean. If we consider the exponential of the edge weights
 then we would sample a triangle with probability proportional to
@@ -382,6 +384,8 @@ that all the weights are at most $e$. One possible issue is that
 this would place too ``squeeze'' the weights into a narrow
 region and bias the sampling probabilities in unintended ways.
 Instead, we consider the following algorithm.
+
+\subsubsection{Approach 2}
 
 The algorithm is the same as the one in the section
 on ordering triangles by geometric mean of edge weights
@@ -404,6 +408,16 @@ $\propto \left(w_{ac} + w_{ab} + w_{bc'}\right)$.
 Normalize the probabilities over all edges, all vertices in
 $N(a) \setminus b$ and all vertices in $N(b) \setminus a$
 respectively.
+
+\subsubsection{Approach 3}
+
+Another simpler algorithm is the following. In each iteration, sample an edge
+with probability proportional to its weight. For each sampled edge, iterate
+over all neighbors of the endpoints of the edge and count the number of
+triangles that contain this edge. Then, a triangle defined by vertices $a,b$
+and $c$ is counted with probability $w_{ab} + w_{bc} + w_{ca}$. The time
+complexity to count all triangles for a given edge is $d_u + d_v$, but this
+only needs to be done once at the end of the sampling loop.
 
 %---------------------------------------------------------
 
