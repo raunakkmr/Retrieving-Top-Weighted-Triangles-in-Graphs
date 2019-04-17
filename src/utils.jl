@@ -1,3 +1,4 @@
+using DataStructures
 using LightGraphs
 using ScHoLP
 using SimpleWeightedGraphs
@@ -98,4 +99,19 @@ function get_adj_list_higher_deg(n::Int64, edge_list::Array)
     end
 
     return adj_list
+end
+
+function postprocess_counters(k::Int64,
+                              kprime::Int64,
+                              x::Dict,
+                              compute_weight::Function)
+    kprime = min(kprime, length(x))
+    k = min(k, kprime)
+    x_array = [(count,triangle) for (triangle,count) in zip(keys(x), values(x))]
+    sorted_x = sort!(x_array, by = x -> x[1], rev=true)
+    top_kprime = [(compute_weight(triangle), triangle) for (_,triangle) in sorted_x[1:kprime]]
+    top_k = nlargest(k, top_kprime)
+
+    return top_k
+
 end
