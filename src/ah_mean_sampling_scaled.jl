@@ -83,7 +83,7 @@ function compute_weighted_triangles(n::Int64,
         return adj_list.weights[a,b] * adj_list.weights[b,c] * adj_list.weights[a,c]
     end
     x_array = [(count,triangle) for (triangle,count) in zip(keys(x), values(x))]
-    sorted_x = sort!(x_array, by = x -> x[1])
+    sorted_x = sort!(x_array, by = x -> x[1], rev=true)
     top_kprime = [(compute_weight(triangle), triangle) for (_,triangle) in sorted_x[1:kprime]]
     top_k = nlargest(k, top_kprime)
 

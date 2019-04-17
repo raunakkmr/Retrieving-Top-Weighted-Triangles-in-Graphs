@@ -53,7 +53,10 @@ function main()
     n, edge_list = get_edge_list(ex, p)
     time = @elapsed triangles = construct_and_compute(n, edge_list)
     writedlm(output_file, triangles)
-    write(open(output_file, "a"), "Time: $time")
+    open(output_file, "a") do f
+        write(f, "Time: $time")
+        write(f, "p: $p\n")
+    end
 end
 
 main()
