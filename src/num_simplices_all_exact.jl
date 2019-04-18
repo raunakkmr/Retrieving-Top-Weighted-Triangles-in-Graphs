@@ -7,7 +7,8 @@ using ScHoLP
 using SimpleWeightedGraphs
 
 function get_edges_to_simplices(edge_list::Array, ex::HONData)
-    appearances = SimpleGraph(length(edge_list))
+    m = length(edge_list)
+    appearances = SimpleGraph(m + length(ex.nverts))
     num_simplices = 0
     edge_id, vertex_id = Dict(), Dict()
     let idx = 0
@@ -32,7 +33,7 @@ function get_edges_to_simplices(edge_list::Array, ex::HONData)
                     if !haskey(edge_id, edge)
                         edge_id[edge] = length(edge_id) + 1
                     end
-                    add_edge!(appearances, edge_id[edge], num_simplices)
+                    add_edge!(appearances, edge_id[edge], m+num_simplices)
                 end
             end
             idx += nvert
@@ -46,6 +47,7 @@ function compute_weighted_triangles(num_simplices::Int64,
                                     adj_list::SimpleWeightedGraph, 
                                     appearances::SimpleGraph,
                                     edge_id::Dict)
+    m = ne(adj_list)
     triangles = []
     seen = Set()
     for v in vertices(adj_list)
@@ -63,16 +65,18 @@ function compute_weighted_triangles(num_simplices::Int64,
                 e_vw = v < w ? (v,w) : (w,v)
                 avu = neighbors(appearances, edge_id[e_vu])
                 avw = neighbors(appearances, edge_id[e_vw])
-                svu = sparsevec(avu, ones(length(avu)), num_simplices)
-                svw = sparsevec(avw, ones(length(avw)), num_simplices)
+                svu = sparsevec(avu, ones(length(avu)), m+num_simplices)
+                svw = sparsevec(avw, ones(length(avw)), m+num_simplices)
                 if has_edge(adj_list, u, w)
+                    u, w = u < w ? (u,w) : (w,u)
                     auw = neighbors(appearances, edge_id[(u,w)])
-                    suw = sparsevec(auw, ones(length(auw)), num_simplices)
+                    suw = sparsevec(auw, ones(length(auw)), m+num_simplices)
                     weight_uvw = nnz(svu .+ svw .+ suw)
                     # weight_uvw = sum(svu .* svw .* suw)
                     push!(triangles, (weight_uvw, triangle))
                     push!(seen, triangle)
                 elseif has_edge(adj_list, w,u)
+                    u, w = u < w ? (u,w) : (w,u)
                     auw = neighbors(appearances, edge_id[(w,u)])
                     suw = sparsevec(auw, ones(length(auw)), num_simplices)
                     weight_uvw = nnz(svu .+ svw .+ suw)
