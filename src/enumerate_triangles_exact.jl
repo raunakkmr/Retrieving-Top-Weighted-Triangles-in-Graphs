@@ -21,9 +21,7 @@ function compute_weighted_triangles(adj_list::SimpleWeightedGraph)
                 if in(triangle, seen)
                   continue
                 end
-                if has_edge(adj_list, u, w)
-                    push!(seen, triangle)
-                elseif has_edge(adj_list, w, u)
+                if has_edge(adj_list, u, w) || has_edge(adj_list, w, u)
                     push!(seen, triangle)
                 end
             end

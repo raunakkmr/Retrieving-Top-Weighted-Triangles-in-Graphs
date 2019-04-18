@@ -589,7 +589,7 @@ edge to be 1 and normalize them to get sampling probabilities.
         continue
     }
     Sample edge $(a,c')$ with probability $p_{ac'}$.\\
-    $x_{abc} \leftarrow x_{abc} + w_{bc'}$.
+    $x_{abc} \leftarrow x_{abc} + w_{bc'} w_{dc'}$.
   }
   \KwRet{$x$}
 \end{algorithm}
