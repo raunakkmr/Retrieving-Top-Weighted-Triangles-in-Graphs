@@ -128,26 +128,6 @@ function postprocess_counters(k::Int64,
 
 end
 
-function postprocess_counters_num_simplices(k::Int64,
-                                            kprime::Int64,
-                                            x::Dict,
-                                            n::Int64,
-                                            m::Int64,
-                                            num_simplices::Int64,
-                                            vertices_to_simplices::SimpleDiGraph,
-                                            edges_to_simplices::SimpleDiGraph,
-                                            compute_weight::Function)
-    kprime = min(kprime, length(x))
-    k = min(k, kprime)
-    x_array = [(count,t) for (t,count) in zip(keys(x), values(x))]
-    sorted_x = sort!(x_array, by = x -> x[1], rev=true)
-    top_kprime = [(compute_weight(t, n, m, num_simplices, vertices_to_simplices, edges_to_simplices), t) for (_,t) in sorted_x[1:kprime]]
-    top_k = nlargest(k, top_kprime)
-
-    return top_k
-
-end
-
 function get_edges_to_simplices(m::Int64, ex::HONData)
     appearances = SimpleDiGraph(m + length(ex.nverts))
     num_simplices = 0
@@ -178,38 +158,4 @@ function get_edges_to_simplices(m::Int64, ex::HONData)
     end
 
     return num_simplices, appearances, edge_id, rev_edge_id
-end
-
-function get_simplices_to_vertices(n::Int64, ex::HONData)
-    appearances = SimpleDiGraph(n + length(ex.nverts))
-    num_simplices = 0
-    vertex_id = get_vertex_id(ex)
-    let idx = 0
-        for nvert in ex.nverts
-            num_simplices += 1
-            for i in range(idx+1, stop=idx+nvert)
-                v = vertex_id[ex.simplices[i]]
-                add_edge!(appearances, num_simplices, length(ex.nverts)+v)
-            end
-        end
-    end
-
-    return appearances
-end
-
-function get_vertices_to_simplices(n::Int64, ex::HONData)
-    appearances = SimpleDiGraph(n + length(ex.nverts))
-    num_simplices = 0
-    vertex_id = get_vertex_id(ex)
-    let idx = 0
-        for nvert in ex.nverts
-            num_simplices += 1
-            for i in range(idx+1, stop=idx+nvert)
-                v = vertex_id[ex.simplices[i]]
-                add_edge!(appearances, v, n+num_simplices)
-            end
-        end
-    end
-
-    return appearances
 end
