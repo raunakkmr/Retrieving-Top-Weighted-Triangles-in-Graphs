@@ -6,22 +6,14 @@ using ScHoLP
 using SimpleWeightedGraphs
 
 function compute_weighted_triangles(ex::HONData)
-    triangles, vertex_id = Dict(), Dict()
+    triangles = Dict()
+    vertex_id = get_vertex_id(ex)
     let idx = 0
         for nvert in ex.nverts
             for i in range(idx+1, stop=idx+nvert)
                 for j in range(i+1, stop=idx+nvert)
                     for k in range(j+1, stop=idx+nvert)
                         v_i, v_j, v_k = ex.simplices[i], ex.simplices[j], ex.simplices[k]
-                        if !haskey(vertex_id, v_i)
-                            vertex_id[v_i] = length(vertex_id) + 1
-                        end
-                        if !haskey(vertex_id, v_j)
-                            vertex_id[v_j] = length(vertex_id) + 1
-                        end
-                        if !haskey(vertex_id, v_k)
-                            vertex_id[v_k] = length(vertex_id) + 1
-                        end
                         t = Tuple(sort([vertex_id[v_i], vertex_id[v_j], vertex_id[v_k]]))
                         if !haskey(triangles, t)
                             triangles[t] = 0

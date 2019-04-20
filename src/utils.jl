@@ -21,20 +21,32 @@ function read_txt_data(dataset::String)
                    dataset)
 end
 
+function get_vertex_id(ex::HONData)
+    vertex_id = Dict()
+    let idx = 0
+        for nvert in ex.nverts
+            for i in range(idx+1, stop=idx+nvert)
+                v = ex.simplices[i]
+                if !haskey(vertex_id, v)
+                    vertex_id[v] = length(vertex_id) + 1
+                end
+            end
+            idx += nvert
+        end
+    end
+
+    return vertex_id
+end
+
 """Gather the edges that exist in the projected graph."""
 function get_edge_list(ex::HONData, p::Float64=1, weighted::Bool=true)
-    edges, vertices, vertex_id = Dict(), Set(), Dict()
+    edges, vertices = Dict(), Set()
+    vertex_id = get_vertex_id(ex)
     let idx = 0
         for nvert in ex.nverts
             for i in range(idx+1, stop=idx+nvert)
                 for j in range(i+1, stop=idx+nvert)
                     v_i, v_j = ex.simplices[i], ex.simplices[j]
-                    if !haskey(vertex_id, v_i)
-                        vertex_id[v_i] = length(vertex_id) + 1
-                    end
-                    if !haskey(vertex_id, v_j)
-                        vertex_id[v_j] = length(vertex_id) + 1
-                    end
                     u, v = -1, -1
                     if vertex_id[v_i] < vertex_id[v_j]
                         u, v = vertex_id[v_i], vertex_id[v_j]
@@ -114,4 +126,90 @@ function postprocess_counters(k::Int64,
 
     return top_k
 
+end
+
+function postprocess_counters_num_simplices(k::Int64,
+                                            kprime::Int64,
+                                            x::Dict,
+                                            n::Int64,
+                                            m::Int64,
+                                            num_simplices::Int64,
+                                            vertices_to_simplices::SimpleDiGraph,
+                                            edges_to_simplices::SimpleDiGraph,
+                                            compute_weight::Function)
+    kprime = min(kprime, length(x))
+    k = min(k, kprime)
+    x_array = [(count,t) for (t,count) in zip(keys(x), values(x))]
+    sorted_x = sort!(x_array, by = x -> x[1], rev=true)
+    top_kprime = [(compute_weight(t, n, m, num_simplices, vertices_to_simplices, edges_to_simplices), t) for (_,t) in sorted_x[1:kprime]]
+    top_k = nlargest(k, top_kprime)
+
+    return top_k
+
+end
+
+function get_edges_to_simplices(m::Int64, ex::HONData)
+    appearances = SimpleDiGraph(m + length(ex.nverts))
+    num_simplices = 0
+    edge_id, rev_edge_id = Dict(), Dict()
+    vertex_id = get_vertex_id(ex)
+    let idx = 0
+        for nvert in ex.nverts
+            num_simplices += 1
+            for i in range(idx+1, stop=idx+nvert)
+                for j in range(i+1, stop=idx+nvert)
+                    v_i, v_j = ex.simplices[i], ex.simplices[j]
+                    u, v = -1, -1
+                    if vertex_id[v_i] < vertex_id[v_j]
+                        u, v = vertex_id[v_i], vertex_id[v_j]
+                    else
+                        u, v = vertex_id[v_j], vertex_id[v_i]
+                    end
+                    edge = (u, v)
+                    if !haskey(edge_id, edge)
+                        edge_id[edge] = length(edge_id) + 1
+                        rev_edge_id[edge_id[edge]] = edge
+                    end
+                    add_edge!(appearances, edge_id[edge], m+num_simplices)
+                end
+            end
+            idx += nvert
+        end
+    end
+
+    return num_simplices, appearances, edge_id, rev_edge_id
+end
+
+function get_simplices_to_vertices(n::Int64, ex::HONData)
+    appearances = SimpleDiGraph(n + length(ex.nverts))
+    num_simplices = 0
+    vertex_id = get_vertex_id(ex)
+    let idx = 0
+        for nvert in ex.nverts
+            num_simplices += 1
+            for i in range(idx+1, stop=idx+nvert)
+                v = vertex_id[ex.simplices[i]]
+                add_edge!(appearances, num_simplices, length(ex.nverts)+v)
+            end
+        end
+    end
+
+    return appearances
+end
+
+function get_vertices_to_simplices(n::Int64, ex::HONData)
+    appearances = SimpleDiGraph(n + length(ex.nverts))
+    num_simplices = 0
+    vertex_id = get_vertex_id(ex)
+    let idx = 0
+        for nvert in ex.nverts
+            num_simplices += 1
+            for i in range(idx+1, stop=idx+nvert)
+                v = vertex_id[ex.simplices[i]]
+                add_edge!(appearances, v, n+num_simplices)
+            end
+        end
+    end
+
+    return appearances
 end

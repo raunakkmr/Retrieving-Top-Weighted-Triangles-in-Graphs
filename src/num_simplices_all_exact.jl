@@ -6,46 +6,9 @@ using SparseArrays
 using ScHoLP
 using SimpleWeightedGraphs
 
-function get_edges_to_simplices(edge_list::Array, ex::HONData)
-    m = length(edge_list)
-    appearances = SimpleGraph(m + length(ex.nverts))
-    num_simplices = 0
-    edge_id, vertex_id = Dict(), Dict()
-    let idx = 0
-        for nvert in ex.nverts
-            num_simplices += 1
-            for i in range(idx+1, stop=idx+nvert)
-                for j in range(i+1, stop=idx+nvert)
-                    v_i, v_j = ex.simplices[i], ex.simplices[j]
-                    if !haskey(vertex_id, v_i)
-                        vertex_id[v_i] = length(vertex_id) + 1
-                    end
-                    if !haskey(vertex_id, v_j)
-                        vertex_id[v_j] = length(vertex_id) + 1
-                    end
-                    u, v = -1, -1
-                    if vertex_id[v_i] < vertex_id[v_j]
-                        u, v = vertex_id[v_i], vertex_id[v_j]
-                    else
-                        u, v = vertex_id[v_j], vertex_id[v_i]
-                    end
-                    edge = (u, v)
-                    if !haskey(edge_id, edge)
-                        edge_id[edge] = length(edge_id) + 1
-                    end
-                    add_edge!(appearances, edge_id[edge], m+num_simplices)
-                end
-            end
-            idx += nvert
-        end
-    end
-
-    return num_simplices, appearances, edge_id 
-end
-
 function compute_weighted_triangles(num_simplices::Int64,
                                     adj_list::SimpleWeightedGraph, 
-                                    appearances::SimpleGraph,
+                                    appearances::SimpleDiGraph,
                                     edge_id::Dict)
     m = ne(adj_list)
     triangles = []
@@ -95,7 +58,7 @@ end
 function construct_and_compute(ex::HONData)
     n, edge_list = get_edge_list(ex, 1.0)
     adj_list = get_adj_list_higher_deg(n, edge_list)
-    num_simplices, appearances, edge_id = get_edges_to_simplices(edge_list, ex)
+    num_simplices, appearances, edge_id, _ = get_edges_to_simplices(length(edge_list), ex)
     triangles = compute_weighted_triangles(num_simplices, adj_list, appearances, edge_id)
 end
 
