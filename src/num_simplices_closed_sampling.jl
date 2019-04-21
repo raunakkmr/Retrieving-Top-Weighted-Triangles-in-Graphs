@@ -8,11 +8,8 @@ using SimpleWeightedGraphs
 using SparseArrays
 using StatsBase
 
-using Random
-Random.seed!(0)
-
-function nbr_samplers(graph::SimpleGraph)
-    degrees = [length(neighbors(graph, v)) for v in vertices(graph)]
+function nbr_samplers(graph::SimpleGraph, idx::Int64)
+    degrees = [length(neighbors(graph, v)) for v in vertices(graph)[1:idx]]
     wts = [ones(degree) for degree in degrees]
     probs = []
     for (i, (w, d)) in enumerate(zip(wts, degrees))
@@ -28,14 +25,15 @@ function nbr_samplers(graph::SimpleGraph)
     return graph_samplers
 end
 
-function construct_samplers(ledges::Array,
-                            lgraph::SimpleGraph,
-                            rgraph::SimpleGraph)
+function construct_samplers(graphs::Array,
+                            m::Int64,
+                            num_simplices::Int64)
+    ledges, lgraph, rgraph = graphs
     ledge_prob = Categorical(ones(length(ledges)) / length(ledges))
     ledge_sampler = sampler(ledge_prob)
 
-    lgraph_samplers = nbr_samplers(lgraph)
-    rgraph_samplers = nbr_samplers(rgraph)
+    lgraph_samplers = nbr_samplers(lgraph, m)
+    rgraph_samplers = nbr_samplers(rgraph, num_simplices)
 
     return [ledge_sampler, lgraph_samplers, rgraph_samplers]
 end
@@ -106,8 +104,8 @@ function construct_and_compute(n::Int64,
     num_simplices, lgraph, edge_id, rev_edge_id = get_edges_to_simplices(m, ex)
     ledges = [(src(e), dst(e)) for e in edges(lgraph)]
     rgraph = get_simplices_to_vertices(n, ex, vertex_id)
-    samplers = construct_samplers(ledges, lgraph, rgraph)
     graphs = [ledges, lgraph, rgraph]
+    samplers = construct_samplers(graphs, m, num_simplices)
     ids = [edge_id, rev_edge_id]
     triangles = compute_weighted_triangles(n, m, kprime, k, num_simplices, graphs, samplers, ids, ex)
 end
