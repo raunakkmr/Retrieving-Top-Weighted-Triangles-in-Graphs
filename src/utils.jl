@@ -129,7 +129,7 @@ function postprocess_counters(k::Int64,
 end
 
 function get_edges_to_simplices(m::Int64, ex::HONData)
-    appearances = SimpleDiGraph(m + length(ex.nverts))
+    appearances = SimpleGraph(m + length(ex.nverts))
     num_simplices = 0
     edge_id, rev_edge_id = Dict(), Dict()
     vertex_id = get_vertex_id(ex)

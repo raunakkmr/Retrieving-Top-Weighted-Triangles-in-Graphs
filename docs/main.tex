@@ -497,7 +497,7 @@ where $W_1$ and $W_2$ are the normalizing constants.
         continue
     }
     Sample edge $(a,c')$ with probability $p_{ac'}$.\\
-    $x_{abc} \leftarrow x_{abc} + w_{bc'}$.
+    $x_{ab} \leftarrow x_{ab} + w_{bc'}$.
   }
   \KwRet{$x$}
 \end{algorithm}
@@ -573,7 +573,7 @@ Similar to the previous section, we will set the weight of each
 edge to be 1 and normalize them to get sampling probabilities.
 
 \begin{algorithm}\label{alg:allsampling}
-  \caption{Sampling Closed Triangles}
+  \caption{Sampling All Triangles}
   \SetKwInOut{Input}{Input}
   \SetKwInOut{Output}{Output}
   \Input{A set of simplices $S$, number of samples $s$.}
@@ -589,7 +589,7 @@ edge to be 1 and normalize them to get sampling probabilities.
         continue
     }
     Sample edge $(a,c')$ with probability $p_{ac'}$.\\
-    $x_{abc} \leftarrow x_{abc} + w_{bc'} w_{dc'}$.
+    $x_{abd} \leftarrow x_{abd} + w_{bc'} w_{dc'}$.
   }
   \KwRet{$x$}
 \end{algorithm}

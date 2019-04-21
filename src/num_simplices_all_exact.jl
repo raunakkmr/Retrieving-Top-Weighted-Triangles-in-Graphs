@@ -8,7 +8,7 @@ using SimpleWeightedGraphs
 
 function compute_weighted_triangles(num_simplices::Int64,
                                     adj_list::SimpleWeightedGraph, 
-                                    appearances::SimpleDiGraph,
+                                    appearances::SimpleGraph,
                                     edge_id::Dict)
     m = ne(adj_list)
     triangles = []
