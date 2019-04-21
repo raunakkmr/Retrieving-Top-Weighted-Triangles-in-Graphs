@@ -159,3 +159,23 @@ function get_edges_to_simplices(m::Int64, ex::HONData)
 
     return num_simplices, appearances, edge_id, rev_edge_id
 end
+
+function get_simplices_to_vertices(n::Int64,
+                                   ex::HONData,
+                                   vertex_id::Dict)
+    g = SimpleGraph(n + length(ex.nverts))
+    num_simplices = 0
+    let idx = 0
+        for nvert in ex.nverts
+            num_simplices += 1
+            for i in range(idx+1, stop=idx+nvert)
+                v = vertex_id[ex.simplices[i]]
+                add_edge!(g, num_simplices, length(ex.nverts)+v)
+                add_edge!(g, length(ex.nverts)+v, num_simplices)
+            end
+            idx += nvert
+        end
+    end
+
+    return g
+end

@@ -11,26 +11,6 @@ using StatsBase
 using Random
 Random.seed!(0)
 
-function get_simplices_to_vertices(n::Int64,
-                                   ex::HONData,
-                                   vertex_id::Dict)
-    g = SimpleGraph(n + length(ex.nverts))
-    num_simplices = 0
-    let idx = 0
-        for nvert in ex.nverts
-            num_simplices += 1
-            for i in range(idx+1, stop=idx+nvert)
-                v = vertex_id[ex.simplices[i]]
-                add_edge!(g, num_simplices, length(ex.nverts)+v)
-                add_edge!(g, length(ex.nverts)+v, num_simplices)
-            end
-            idx += nvert
-        end
-    end
-
-    return g
-end
-
 function nbr_samplers(graph::SimpleGraph)
     degrees = [length(neighbors(graph, v)) for v in vertices(graph)]
     wts = [ones(degree) for degree in degrees]
@@ -111,13 +91,7 @@ function compute_weighted_triangles(n::Int64,
 
         return weight
     end
-
-    kprime = min(kprime, length(x))
-    k = min(k, kprime)
-    x_array = [(count,triangle) for (triangle,count) in zip(keys(x), values(x))]
-    sorted_x = sort!(x_array, by = x -> x[1], rev=true)
-    top_kprime = [(compute_weight(triangle), triangle) for (_,triangle) in sorted_x[1:kprime]]
-    top_k = nlargest(k, top_kprime)
+    top_k = postprocess_counters(k, kprime, x, compute_weight)
 
     return top_k
 end
