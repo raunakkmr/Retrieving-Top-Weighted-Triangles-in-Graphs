@@ -26,7 +26,9 @@ function nbr_samplers(graph::SimpleGraph, idx::Int64)
     return graph_samplers
 end
 
-"""Construct samplers for sampling edges from the bipartite graph between edges and simplices, and sampling neighbors of vertices from the bipartite graphs between edges and simplices, and simplices and vertices."""
+"""Construct samplers for sampling edges from the bipartite graph between
+edges and simplices, and sampling neighbors of vertices from the bipartite
+graphs between edges and simplices, and simplices and vertices."""
 function construct_samplers(graphs::Array,
                             m::Int64,
                             num_simplices::Int64)
