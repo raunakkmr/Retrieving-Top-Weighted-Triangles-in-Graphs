@@ -7,8 +7,8 @@ using LightGraphs
 using ScHoLP
 using SimpleWeightedGraphs
 
-"""Enumerate triangles and sort them based on product of edge weights."""
-function compute_weighted_triangles(adj_list::SimpleWeightedGraph)
+"""Enumerate triangles."""
+function compute_triangles(adj_list::SimpleWeightedGraph)
     seen = Set()
     for v in vertices(adj_list)
         neighbors_v = neighbors(adj_list, v)
@@ -34,7 +34,7 @@ end
 """Construct the graph, and compute and return the triangles."""
 function construct_and_compute(n::Int64, edge_list::Array)
     adj_list = get_adj_list_higher_deg(n, edge_list)
-    triangles = compute_weighted_triangles(adj_list)
+    triangles = compute_triangles(adj_list)
     return triangles
 end
 

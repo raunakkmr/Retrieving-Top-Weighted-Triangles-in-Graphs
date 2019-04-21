@@ -5,6 +5,7 @@ using DelimitedFiles
 using ScHoLP
 using SimpleWeightedGraphs
 
+"""Enumerate triangles and sort them based on p-mean of their edge weights."""
 function compute_weighted_triangles(adj_list::SimpleWeightedGraph)
     triangles = []
     seen = Set()
@@ -31,11 +32,14 @@ function compute_weighted_triangles(adj_list::SimpleWeightedGraph)
             end
         end
     end
+    # Sort by weight, break ties based on the ids of the vertices of the
+    # triangle.
     sort!(triangles, by = x->[x[1],x[2][1],x[2][2],x[2][3]], rev=true)
 
     return triangles
 end
 
+"""Construct the graph, and compute and return the triangles in sorted order."""
 function construct_and_compute(n::Int64, edge_list::Array)
     adj_list = get_adj_list_higher_deg(n, edge_list)
     triangles = compute_weighted_triangles(adj_list)

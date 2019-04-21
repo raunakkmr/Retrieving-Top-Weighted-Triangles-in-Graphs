@@ -5,6 +5,7 @@ using DelimitedFiles
 using ScHoLP
 using SimpleWeightedGraphs
 
+"""Enumerate closed triangles and sort them based on the number of simplices that they appear in."""
 function compute_weighted_triangles(ex::HONData)
     triangles = Dict()
     vertex_id = get_vertex_id(ex)
@@ -27,11 +28,14 @@ function compute_weighted_triangles(ex::HONData)
     end
     triangles = collect(triangles)
     triangles = [(w, t) for (t, w) in triangles]
+    # Sort by weight, break ties based on the ids of the vertices of the
+    # triangle.
     sort!(triangles, by = x->[x[1],x[2][1],x[2][2],x[2][3]], rev=true)
 
     return triangles
 end
 
+"""Construct the graph, and compute and return the triangles in sorted order."""
 function construct_and_compute(ex::HONData)
     triangles = compute_weighted_triangles(ex)
 end

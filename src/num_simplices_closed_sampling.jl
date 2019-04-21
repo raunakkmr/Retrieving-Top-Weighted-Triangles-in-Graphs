@@ -8,6 +8,7 @@ using SimpleWeightedGraphs
 using SparseArrays
 using StatsBase
 
+"""Construct samplers for sampling neighbors of vertices. Only constructs vertices for the first idx vertices of the graph."""
 function nbr_samplers(graph::SimpleGraph, idx::Int64)
     degrees = [length(neighbors(graph, v)) for v in vertices(graph)[1:idx]]
     wts = [ones(degree) for degree in degrees]
@@ -25,6 +26,7 @@ function nbr_samplers(graph::SimpleGraph, idx::Int64)
     return graph_samplers
 end
 
+"""Construct samplers for sampling edges from the bipartite graph between edges and simplices, and sampling neighbors of vertices from the bipartite graphs between edges and simplices, and simplices and vertices."""
 function construct_samplers(graphs::Array,
                             m::Int64,
                             num_simplices::Int64)
@@ -32,12 +34,16 @@ function construct_samplers(graphs::Array,
     ledge_prob = Categorical(ones(length(ledges)) / length(ledges))
     ledge_sampler = sampler(ledge_prob)
 
+    # Since we only sample neighbors of edges in the first graph and the
+    # neighbors of simplices in the second graph, only construct samplers for
+    # those vertices.
     lgraph_samplers = nbr_samplers(lgraph, m)
     rgraph_samplers = nbr_samplers(rgraph, num_simplices)
 
     return [ledge_sampler, lgraph_samplers, rgraph_samplers]
 end
 
+"""Sample triangles / diamonds and return the top k closed triangles based on the number of simplices they appear in."""
 function compute_weighted_triangles(n::Int64,
                                     m::Int64,
                                     kprime::Int64,
@@ -51,10 +57,19 @@ function compute_weighted_triangles(n::Int64,
     x = Dict()  # Counters.
     num_diamonds = 0
 
+    # ledges is the set of edges between edges in the original graph and
+    # simplices. There is an edge between e and s if edge e appears in simplex
+    # s. lgraph is the adjacency list representation of this graph.
+    # rgraph is the adjacency list for the graph between simplices and
+    # vertices. There is an edge between s and v if vertex v appears in simplex
+    # s.
     ledges, lgraph, rgraph = graphs
     ledge_sampler, lgraph_samplers, rgraph_samplers = samplers
     edge_id, rev_edge_id = ids
 
+    # Sample (edge, simplex). Sample (simplex, vertex). If this forms a
+    # triangle, then sample (edge, simplex'). If (simplex', vertex) exists then
+    # increment the counter for the triangles corresponding to (edge, vertex).
     for l in range(1, stop=s)
 
         # a is edge id, c is m + simplex number
@@ -77,7 +92,8 @@ function compute_weighted_triangles(n::Int64,
         x[t] += 1
     end
 
-    # Postprocessing.
+    # Postprocessing. Compute the weight of the triangles corresponding to the
+    # top kprime counters, and return the top k triangles from these.
     function compute_weight((a, b, c))
         ar = neighbors(rgraph, a+num_simplices)
         br = neighbors(rgraph, b+num_simplices)
@@ -94,6 +110,7 @@ function compute_weighted_triangles(n::Int64,
     return top_k
 end
 
+"""Construct the graph, and compute and return the triangles in sorted order."""
 function construct_and_compute(n::Int64,
                                kprime::Int64,
                                k::Int64,

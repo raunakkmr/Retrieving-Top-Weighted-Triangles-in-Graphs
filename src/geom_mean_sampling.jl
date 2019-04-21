@@ -7,13 +7,9 @@ using ScHoLP
 using SimpleWeightedGraphs
 using StatsBase
 
+"""Construct samplers for sampling edges and for sampling neighbors of a
+vertex."""
 function construct_samplers(n::Int64, edge_list::Array, adj_list::SimpleWeightedGraph)
-    # # Construct a sampler for sampling edges.
-    # edge_weights = [w for (_,w) in edge_list]
-    # Z = sum(edge_weights)
-    # edge_prob = Categorical(edge_weights ./ Z)
-    # edge_sampler = sampler(edge_prob)
-
     # Construct sampler for sampling neighbors of a vertex.
     nbr_weights = [adj_list.weights[v,neighbors(adj_list, v)] for v in vertices(adj_list)]
     nbr_z = [sum(weights) for weights in nbr_weights]
@@ -36,6 +32,8 @@ function construct_samplers(n::Int64, edge_list::Array, adj_list::SimpleWeighted
     return edge_sampler, nbr_samplers, Z
 end
 
+"""Sample triangles and return the top k triangles based on geometric mean of
+edge weights."""
 function compute_weighted_triangles(n::Int64,
                                     kprime::Int64,
                                     k::Int64,
@@ -48,6 +46,7 @@ function compute_weighted_triangles(n::Int64,
     x = Dict()  # Counters.
     num_triangles = 0
 
+    # Sample an edge, and a neighbor of each of the endpoints. If this forms a triangle, increment its counter.
     for l in range(1, stop=s)
 
         (a,b), _ = edge_list[rand(edge_sampler)]
@@ -55,6 +54,11 @@ function compute_weighted_triangles(n::Int64,
         if length(neighbors(adj_list, a)) == 1 || length(neighbors(adj_list, b)) == 1
             continue
         end
+
+        # Rejection sampling to sample neighbors of the endpoints. There are
+        # other efficient ways to perform this sampling without rejection, but
+        # this way is simple and works well in practice. Modifying the sampling
+        # code below to use other strategies is not too difficult.
 
         c = b
         while c == b
@@ -76,7 +80,8 @@ function compute_weighted_triangles(n::Int64,
         end
     end
 
-    # Postprocessing.
+    # Postprocessing. Compute the weight of the triangles corresponding to the
+    # top kprime counters, and return the top k triangles from these.
     function compute_weight((a,b,c))
         return adj_list.weights[a,b] * adj_list.weights[b,c] * adj_list.weights[a,c]
     end
@@ -85,6 +90,7 @@ function compute_weighted_triangles(n::Int64,
     return top_k
 end
 
+"""Construct the graph, and compute and return the triangles."""
 function construct_and_compute(n::Int64,
                                kprime::Int64,
                                k::Int64,

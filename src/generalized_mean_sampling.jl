@@ -7,6 +7,7 @@ using ScHoLP
 using SimpleWeightedGraphs
 using StatsBase
 
+"""Construct a sampler to sample edges."""
 function construct_samplers(n::Int64, edge_list::Array)
     edge_weights = [w for (e,w) in edge_list]
     Z = sum(edge_weights)
@@ -16,16 +17,19 @@ function construct_samplers(n::Int64, edge_list::Array)
     return edge_sampler
 end
 
+"""Sample triangles and return the top k triangles based on p-mean of their
+edge weights."""
 function compute_weighted_triangles(n::Int64,
                                     kprime::Int64,
                                     k::Int64,
                                     edge_list::Array,
                                     adj_list::SimpleWeightedGraph,
                                     edge_sampler::Distributions.AliasTable)
-    s = 1000000  # Number of sampler.
+    s = 1000000  # Number of samples.
     edge_x, x = Dict(), Dict()  # Counters.
     num_triangles = 0
 
+    # Sample l edges and maintain a counter for each edge.
     for l in range(1, stop=s)
 
         (a,b), _ = edge_list[rand(edge_sampler)]
@@ -36,6 +40,9 @@ function compute_weighted_triangles(n::Int64,
         edge_x[(u,v)] += 1
     end
 
+    # For each sampled edge, iterate through the neighbors of its endpoints.
+    # For each triangle formed by the edge and the neighbor increment its
+    # counter by the counter of the edge.
     for (e, cnt) in edge_x
         u, v = e
         for w in neighbors(adj_list, u)
@@ -60,7 +67,7 @@ function compute_weighted_triangles(n::Int64,
         end
     end
 
-    # Postprocessing.
+    # Postprocessing. Compute the weight of the triangles corresponding to the top kprime counters, and return the top k triangles from these.
     function compute_weight((a,b,c))
         return adj_list.weights[a,b] + adj_list.weights[b,c] + adj_list.weights[a,c]
     end
@@ -69,6 +76,7 @@ function compute_weighted_triangles(n::Int64,
     return top_k
 end
 
+"""Construct the graph, and compute and return the triangles."""
 function construct_and_compute(n::Int64,
                                kprime::Int64,
                                k::Int64,

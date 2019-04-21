@@ -6,6 +6,8 @@ using SparseArrays
 using ScHoLP
 using SimpleWeightedGraphs
 
+"""Enumerate triangles and sort them based on the number of simplices
+that contain at least one edge of this triangle."""
 function compute_weighted_triangles(num_simplices::Int64,
                                     adj_list::SimpleWeightedGraph, 
                                     appearances::SimpleGraph,
@@ -50,11 +52,14 @@ function compute_weighted_triangles(num_simplices::Int64,
             end
         end
     end
+    # Sort by weight, break ties based on the ids of the vertices of the
+    # triangle.
     sort!(triangles, by = x->[x[1],x[2][1],x[2][2],x[2][3]], rev=true)
     return triangles
 
 end
 
+"""Construct the graph, and compute and return the triangles in sorted order."""
 function construct_and_compute(ex::HONData)
     n, edge_list = get_edge_list(ex, 1.0)
     adj_list = get_adj_list_higher_deg(n, edge_list)
