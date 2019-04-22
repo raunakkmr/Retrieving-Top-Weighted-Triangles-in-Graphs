@@ -53,6 +53,11 @@ function compute_weighted_triangles(n::Int64,
 
         # a is edge id, c is m + simplex number.
         a, c = gedges[rand(edge_sampler)]
+        # Need 3 different edges to be connected to simplex to have a valid
+        # triangle.
+        if length(neighbors(graph, c)) < 3
+            continue
+        end
         # b, d are edge id.
         b = neighbors(graph, c)[rand(graph_samplers[c])]
         d = neighbors(graph, c)[rand(graph_samplers[c])]

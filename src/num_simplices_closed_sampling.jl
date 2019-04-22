@@ -76,6 +76,10 @@ function compute_weighted_triangles(n::Int64,
 
         # a is edge id, c is m + simplex number
         a, c = ledges[rand(ledge_sampler)]
+        # Need 3 different vertices in simplex to have a valid triangle.
+        if length(neighbors(rgraph, c-m)) < 3
+            continue
+        end
         # b is num_simplices + vertex id
         b = neighbors(rgraph, c-m)[rand(rgraph_samplers[c-m])]
         if b-num_simplices == rev_edge_id[a][1] || b-num_simplices == rev_edge_id[a][2]
