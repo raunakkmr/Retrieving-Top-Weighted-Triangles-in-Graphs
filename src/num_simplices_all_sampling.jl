@@ -97,7 +97,7 @@ function compute_weighted_triangles(n::Int64,
 
         return weight
     end
-    top_k = postprocess_counters(k, kprime, x, compute_weight)
+    top_k = postprocess_counters(k, x, compute_weight, kprime)
 
     return top_k
 end
@@ -134,7 +134,7 @@ function main()
     open(output_file, "a") do f
         write(f, "Time: $time\n")
         write(f, "k: $k\n")
-        write(f, "kprime: $kprime\n")
+        write(f, "kprime: $kprime")
     end
     
 end

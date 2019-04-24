@@ -111,7 +111,7 @@ function compute_weighted_triangles(n::Int64,
 
         return weight
     end
-    top_k = postprocess_counters(k, kprime, x, compute_weight)
+    top_k = postprocess_counters(k, x, compute_weight, kprime)
 
     return top_k
 end

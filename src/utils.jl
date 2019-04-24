@@ -114,15 +114,20 @@ function get_adj_list_higher_deg(n::Int64, edge_list::Array)
 end
 
 function postprocess_counters(k::Int64,
-                              kprime::Int64,
                               x::Dict,
-                              compute_weight::Function)
-    kprime = min(kprime, length(x))
-    k = min(k, kprime)
-    x_array = [(count,triangle) for (triangle,count) in zip(keys(x), values(x))]
-    sorted_x = sort!(x_array, by = x -> x[1], rev=true)
-    top_kprime = [(compute_weight(triangle), triangle) for (_,triangle) in sorted_x[1:kprime]]
-    top_k = nlargest(k, top_kprime)
+                              compute_weight::Function,
+                              kprime::Int64=-1)
+    if kprime == -1
+        k = min(k, length(x))
+        arr = [(compute_weight(t), t) for (t, _) in zip(keys(x), values(x))]
+        top_k = nlargest(k, arr)
+    else
+        kprime = min(kprime, length(x))
+        k = min(k, kprime)
+        arr = [(cnt, t) for (t, cnt) in zip(keys(x), values(x))]
+        top_kprime = nlargest(kprime, arr)
+        top_k = nlargest(k, [(compute_weight(t), t) for (_, t) in top_kprime])
+    end
 
     return top_k
 

@@ -35,7 +35,6 @@ end
 """Sample triangles and return the top k triangles based on geometric mean of
 edge weights."""
 function compute_weighted_triangles(n::Int64,
-                                    kprime::Int64,
                                     k::Int64,
                                     Z::Float64,
                                     edge_list::Array,
@@ -80,42 +79,40 @@ function compute_weighted_triangles(n::Int64,
         end
     end
 
-    # Postprocessing. Compute the weight of the triangles corresponding to the
-    # top kprime counters, and return the top k triangles from these.
+    # Postprocessing. Compute the weight of the sampled triangles and return
+    # the top k from these.
     function compute_weight((a,b,c))
         return adj_list.weights[a,b] * adj_list.weights[b,c] * adj_list.weights[a,c]
     end
-    top_k = postprocess_counters(k, kprime, x, compute_weight)
+    top_k = postprocess_counters(k, x, compute_weight)
 
     return top_k
 end
 
 """Construct the graph, and compute and return the triangles."""
 function construct_and_compute(n::Int64,
-                               kprime::Int64,
                                k::Int64,
                                edge_list::Array)
     adj_list = get_adj_list(n, edge_list)
     edge_sampler, nbr_samplers, Z = construct_samplers(n, edge_list, adj_list)
-    triangles = compute_weighted_triangles(n, kprime, k, Z, edge_list, adj_list, edge_sampler, nbr_samplers)
+    triangles = compute_weighted_triangles(n, k, Z, edge_list, adj_list, edge_sampler, nbr_samplers)
 
     return triangles
 end
 
 function main()
-    dataset_name, kprime, k = ARGS[1], parse(Int64, ARGS[2]), parse(Int64, ARGS[3])
+    dataset_name, k = ARGS[1], parse(Int64, ARGS[2])
     output_file = "../output/geom_mean_sampling_$dataset_name.txt"
     
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
 
     n, edge_list = get_edge_list(ex, 1.0)
-    time = @elapsed triangles = construct_and_compute(n, kprime, k, edge_list)
+    time = @elapsed triangles = construct_and_compute(n, k, edge_list)
     writedlm(output_file, triangles)
     open(output_file, "a") do f
         write(f, "Time: $time\n")
-        write(f, "k: $k\n")
-        write(f, "kprime: $kprime")
+        write(f, "k: $k")
     end
 end
 
