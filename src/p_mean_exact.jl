@@ -49,7 +49,7 @@ end
 
 function main()
     dataset_name, p = ARGS[1], parse(Float64, ARGS[2])
-    output_file = "../output/$(p)_mean_exact_$dataset_name.txt"
+    output_file = "../output/mean_$(p)_exact_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
@@ -58,8 +58,8 @@ function main()
     time = @elapsed triangles = construct_and_compute(n, edge_list)
     writedlm(output_file, triangles)
     open(output_file, "a") do f
-        write(f, "Time: $time")
-        write(f, "p: $p\n")
+        write(f, "Time: $time\n")
+        write(f, "p: $p")
     end
 end
 

@@ -91,7 +91,7 @@ end
 function main()
     dataset_name, kprime, k, p = ARGS[1], parse(Int64, ARGS[2]), parse(Int64, 
         ARGS[3]), parse(Float64, ARGS[4])
-    output_file = "../output/$(p)_mean_sampling_$dataset_name.txt"
+    output_file = "../output/mean_$(p)_sampling_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)

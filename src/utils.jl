@@ -67,7 +67,7 @@ function get_edge_list(ex::HONData, p::Float64=1, weighted::Bool=true)
         end
     end
 
-    n = length(vertices)
+    n = length(vertex_id)
     edge_list = collect(edges)
     edge_list = [(e, w^p) for (e, w) in edge_list]
 
