@@ -1,5 +1,6 @@
 include("./utils.jl")
 
+using ArgParse
 using DataStructures
 using DelimitedFiles
 using Distributions
@@ -100,8 +101,30 @@ function construct_and_compute(n::Int64,
     return triangles
 end
 
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table s begin
+        "--dataset", "-d"
+            help = "dataset name"
+            arg_type = String
+            required = true
+        "--samples", "-s"
+            help = "number of samples, default: 100000"
+            arg_type = Int64,
+            default = 100000
+        "-k"
+            help = "parameter k for returning top-k triangles, default: 25"
+            arg_type = Int64
+            default = 25
+    end
+
+    return parse_args(s)
+end
+
 function main()
-    dataset_name, k = ARGS[1], parse(Int64, ARGS[2])
+    parsed_args = parse_commandline()
+    dataset_name, k = parsed_args["dataset"], parsed_args["k"]
     output_file = "../output/geom_mean_sampling_$dataset_name.txt"
     
     # Load data in the form of simplices from the ScHoLP package.

@@ -1,5 +1,6 @@
 include("./utils.jl")
 
+using ArgParse
 using DataStructures
 using DelimitedFiles
 using ScHoLP
@@ -47,8 +48,26 @@ function construct_and_compute(n::Int64, edge_list::Array)
     return triangles
 end
 
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table s begin
+        "--dataset", "-d"
+            help = "dataset name"
+            arg_type = String
+            required = true
+        "-p"
+            help = "parameter p for p mean for weights, default: 1.0"
+            arg_type = Float64
+            default = 1.0
+    end
+
+    return parse_args(s)
+end
+
 function main()
-    dataset_name, p = ARGS[1], parse(Float64, ARGS[2])
+    parsed_args = parse_commandline()
+    dataset_name, p = parsed_args["dataset"], parsed_args["p"]
     output_file = "../output/mean_$(p)_exact_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.

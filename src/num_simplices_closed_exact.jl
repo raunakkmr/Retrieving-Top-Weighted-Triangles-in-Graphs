@@ -1,5 +1,6 @@
 include("./utils.jl")
 
+using ArgParse
 using DataStructures
 using DelimitedFiles
 using ScHoLP
@@ -40,8 +41,22 @@ function construct_and_compute(ex::HONData)
     triangles = compute_weighted_triangles(ex)
 end
 
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table s begin
+        "--dataset", "-d"
+            help = "dataset name"
+            arg_type = String
+            required = true
+    end
+
+    return parse_args(s)
+end
+
 function main()
-    dataset_name = ARGS[1]
+    parsed_args = parse_commandline()
+    dataset_name = parsed_args["dataset"]
     output_file = "../output/num_simplices_closed_exact_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.

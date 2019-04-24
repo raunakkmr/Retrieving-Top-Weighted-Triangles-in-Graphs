@@ -1,8 +1,8 @@
 include("./utils.jl")
 
+using ArgParse
 using DataStructures
 using DelimitedFiles
-using Formatting: printfmt
 using LightGraphs
 using ScHoLP
 using SimpleWeightedGraphs
@@ -38,14 +38,28 @@ function construct_and_compute(n::Int64, edge_list::Array)
     return triangles
 end
 
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table s begin
+        "--dataset", "-d"
+            help = "dataset name"
+            arg_type = String
+            required = true
+    end
+
+    return parse_args(s)
+end
+
 function main()
-    dataset_name = ARGS[1]
+    parsed_args = parse_commandline()
+    dataset_name = parsed_args["dataset"]
     output_file = "../output/enumerate_triangles_exact_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
 
-    n, edge_list = get_edge_list(ex)
+    n, edge_list = get_edge_list(ex, 1.0)
     time = @elapsed triangles = construct_and_compute(n, edge_list)
     writedlm(output_file, triangles)
     write(open(output_file, "a"), "Time: $time")
