@@ -32,7 +32,8 @@ function construct_samplers(graph::SimpleGraph, gedges::Array)
 end
 
 """Sample triangles / structures and return the top k triangles based on the number of simplices that contain at least one edge of this triangle."""
-function compute_weighted_triangles(n::Int64,
+function compute_weighted_triangles(s::Int64,
+                                    n::Int64,
                                     m::Int64,
                                     kprime::Int64,
                                     k::Int64,
@@ -41,7 +42,6 @@ function compute_weighted_triangles(n::Int64,
                                     samplers::Array,
                                     ids::Array,
                                     ex::HONData)
-    s = 1000000  # Number of samples.
     x = Dict()  # Counters.
     num_structures = 0
 
@@ -104,7 +104,8 @@ function compute_weighted_triangles(n::Int64,
 end
 
 """Construct the graph, and compute and return the triangles in sorted order."""
-function construct_and_compute(n::Int64,
+function construct_and_compute(s::Int64,
+                               n::Int64,
                                kprime::Int64,
                                k::Int64,
                                edge_list::Array,
@@ -117,7 +118,7 @@ function construct_and_compute(n::Int64,
     samplers = construct_samplers(graph, gedges)
     graphs = [gedges, graph, adj_list]
     ids = [edge_id, rev_edge_id]
-    triangles = compute_weighted_triangles(n, m, kprime, k, num_simplices, graphs, samplers, ids, ex)
+    triangles = compute_weighted_triangles(s, n, m, kprime, k, num_simplices, graphs, samplers, ids, ex)
 
     return triangles
 end
@@ -136,7 +137,7 @@ function parse_commandline()
             default = 500
         "--samples", "-s"
             help = "number of samples, default: 100000"
-            arg_type = Int64,
+            arg_type = Int64
             default = 100000
         "-k"
             help = "parameter k for returning top-k triangles, default: 25"
@@ -151,18 +152,20 @@ function main()
     parsed_args = parse_commandline()
     dataset_name = parsed_args["dataset"]
     kprime, k = parsed_args["kprime"], parsed_args["k"]
+    s = parsed_args["samples"]
     output_file = "../output/num_simplices_all_sampling_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
 
     n, edge_list = get_edge_list(ex, 1.0)
-    time = @elapsed triangles = construct_and_compute(n, kprime, k, edge_list, ex)
+    time = @elapsed triangles = construct_and_compute(s, n, kprime, k, edge_list, ex)
     writedlm(output_file, triangles)
     open(output_file, "a") do f
         write(f, "Time: $time\n")
         write(f, "k: $k\n")
-        write(f, "kprime: $kprime")
+        write(f, "kprime: $kprime\n")
+        write(f, "s: $s")
     end
     
 end

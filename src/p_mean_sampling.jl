@@ -20,12 +20,12 @@ end
 
 """Sample triangles and return the top k triangles based on p-mean of their
 edge weights."""
-function compute_weighted_triangles(n::Int64,
+function compute_weighted_triangles(s::Int64,
+                                    n::Int64,
                                     k::Int64,
                                     edge_list::Array,
                                     adj_list::SimpleWeightedGraph,
                                     edge_sampler::Distributions.AliasTable)
-    s = 1000000  # Number of samples.
     edge_x, x = Dict(), Dict()  # Counters.
     num_triangles = 0
 
@@ -78,12 +78,13 @@ function compute_weighted_triangles(n::Int64,
 end
 
 """Construct the graph, and compute and return the triangles."""
-function construct_and_compute(n::Int64,
+function construct_and_compute(s::Int64,
+                               n::Int64,
                                k::Int64,
                                edge_list::Array)
     adj_list = get_adj_list(n, edge_list)
     edge_sampler = construct_samplers(n, edge_list)
-    triangles = compute_weighted_triangles(n, k, edge_list, adj_list, edge_sampler)
+    triangles = compute_weighted_triangles(s, n, k, edge_list, adj_list, edge_sampler)
 
     return triangles
 end
@@ -102,7 +103,7 @@ function parse_commandline()
             default = 25
         "--samples", "-s"
             help = "number of samples, default: 100000"
-            arg_type = Int64,
+            arg_type = Int64
             default = 100000
         "-p"
             help = "parameter p for p mean for weights, default: 1.0"
@@ -116,18 +117,20 @@ end
 function main()
     parsed_args = parse_commandline()
     dataset_name, k, p = parsed_args["dataset"], parsed_args["k"], parsed_args["p"]
+    s = parsed_args["samples"]
     output_file = "../output/mean_$(p)_sampling_$dataset_name.txt"
 
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
 
     n, edge_list = get_edge_list(ex, p)
-    time = @elapsed triangles = construct_and_compute(n, k, edge_list)
+    time = @elapsed triangles = construct_and_compute(s, n, k, edge_list)
     writedlm(output_file, triangles)
     open(output_file, "a") do f
         write(f, "Time: $time\n")
         write(f, "k: $k\n")
-        write(f, "p: $p")
+        write(f, "p: $p\n")
+        write(f, "s: $s")
     end
 end
 
