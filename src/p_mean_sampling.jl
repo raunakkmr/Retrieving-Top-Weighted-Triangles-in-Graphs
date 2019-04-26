@@ -105,6 +105,9 @@ function parse_commandline()
             help = "number of samples, default: 100000"
             arg_type = Int64
             default = 100000
+        "--uniform", "-u"
+            help = "ignore weights and use uniform sampling"
+            action = :store_true
         "-p"
             help = "parameter p for p mean for weights, default: 1.0"
             arg_type = Float64
@@ -118,12 +121,23 @@ function main()
     parsed_args = parse_commandline()
     dataset_name, k, p = parsed_args["dataset"], parsed_args["k"], parsed_args["p"]
     s = parsed_args["samples"]
-    output_file = "../output/mean_$(p)_sampling_$dataset_name.txt"
+    uniform = parsed_args["uniform"]
+    if uniform
+        output_file = "../output/mean_$(p)_sampling_uniform_$dataset_name.txt"
+    else
+        output_file = "../output/mean_$(p)_sampling_$dataset_name.txt"
+    end
 
     # Load data in the form of simplices from the ScHoLP package.
     ex = read_txt_data(dataset_name)
 
     n, edge_list = get_edge_list(ex, p)
+    if uniform
+        for i in range(1, stop=length(edge_list))
+            e, _ = edge_list[i]
+            edge_list[i] = (e, 1.0)
+        end
+    end
     time = @elapsed triangles = construct_and_compute(s, n, k, edge_list)
     writedlm(output_file, triangles)
     open(output_file, "a") do f
