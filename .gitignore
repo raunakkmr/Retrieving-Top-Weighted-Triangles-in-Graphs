@@ -6,6 +6,7 @@ deps/deps.jl
 .ipynb_checkpoints
 output/
 data/
+old-files/
 
 docs/*.aux
 docs/*.bbl

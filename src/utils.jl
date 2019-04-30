@@ -78,7 +78,6 @@ function get_adj_list(n::Int64, edge_list::Array)
     adj_list = SimpleWeightedGraph(n)
     for ((u, v), w) in edge_list
         add_edge!(adj_list, u, v, w)
-        add_edge!(adj_list, v, u, w)
     end
 
     return adj_list
@@ -176,7 +175,6 @@ function get_simplices_to_vertices(n::Int64,
             for i in range(idx+1, stop=idx+nvert)
                 v = vertex_id[ex.simplices[i]]
                 add_edge!(g, num_simplices, length(ex.nverts)+v)
-                add_edge!(g, length(ex.nverts)+v, num_simplices)
             end
             idx += nvert
         end

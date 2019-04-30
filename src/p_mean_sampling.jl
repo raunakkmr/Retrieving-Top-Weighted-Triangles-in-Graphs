@@ -123,9 +123,9 @@ function main()
     s = parsed_args["samples"]
     uniform = parsed_args["uniform"]
     if uniform
-        output_file = "../output/mean_$(p)_sampling_uniform_$dataset_name.txt"
+        output_file = "../output/mean_$(p)_sampling_uniform_$(dataset_name)_$(k)_$(s).txt"
     else
-        output_file = "../output/mean_$(p)_sampling_$dataset_name.txt"
+        output_file = "../output/mean_$(p)_sampling_$(dataset_name)_$(k)_$(s).txt"
     end
 
     # Load data in the form of simplices from the ScHoLP package.
