@@ -1,49 +1,12 @@
+#ifndef TURAN_H
+#define TURAN_H
+
 #include <bits/stdc++.h>
+#include "graph.h"
 
 using namespace std;
 
-struct full_edge {
-  int src, dst, wt;
-  bool operator<(const full_edge& o) const {
-    if (o.wt != wt) return wt < o.wt;
-    return make_pair(src, dst) < make_pair(o.src, o.dst);
-  }
-};
-
-struct half_edge {
-  int dst, wt;
-};
-
-typedef vector<vector<half_edge>> Graph;
-typedef map<int, vector<half_edge>> MappedGraph;
-
-vector<int> ordering;
-
-struct Shadow {
-  MappedGraph g;
-  int l;
-  bool operator<(const Shadow& o) const {
-    return l < o.l;
-  }
-};
-
-template<class InputGraph>
-inline MappedGraph create_shadow(int c, InputGraph& g) {
-  map<int, bool> inside;
-  for (auto v : g[c]) {
-    inside[v.dst] = true;
-  }
-
-  MappedGraph ret;
-  for (auto v : g[c]) {
-    for (auto w : g[v.dst]) {
-      if (!inside[w.dst]) continue;
-      ret[v.dst].push_back(w);
-      ret[w.dst];
-    }
-  }
-  return ret;
-}
+namespace wsdm_2019_graph {
 
 void TuranShadow(Graph& G, int CLIQUE_SIZE) {
   cerr << "=============================================" << endl;
@@ -270,91 +233,6 @@ void TuranBK(Graph& G, const vector<int>& degenOrder, int CLIQUE_SIZE) {
   cerr << "Time (s): " << (clock() - st) / CLOCKS_PER_SEC << endl;
 }
 
-int main(int argc, char* argv[]) {
-  ios::sync_with_stdio(0);
-  cin.tie(0);
-  srand(time(0)); 
-
-  auto res = freopen(argv[1], "r", stdin);
-  if (res == nullptr) return 1;
-
-  int CLIQUE_SIZE = atoi(argv[2]);
-
-  int n, m;
-  cin >> n >> m;
-
-  Graph G(n), Gu(n);
-  ordering.resize(n);
-  for (int i = 0; i < n; i++) {
-    ordering[i] = i;
-  }
-  random_shuffle(ordering.begin(), ordering.end());
-
-  int u, v;
-  while (cin >> u >> v) {
-    if (ordering[u] < ordering[v]) {
-      G[u].push_back({v, 1});
-    } else {
-      G[v].push_back({u, 1});
-    }
-    Gu[u].push_back({v, 1});
-    Gu[v].push_back({u, 1});
-  }
-
-  cerr << "=============================================" << endl;
-  cerr << "Computing graph statistics" << endl;
-  cerr << "=============================================" << endl;
-  cerr << "Computing degeneracy..." << endl;
-  priority_queue<pair<int, int>> pq;
-  vector<bool> done(n);
-  vector<int> degree(n);
-  for (int i = 0; i < n; i++) {
-    degree[i] = Gu[i].size();
-    pq.push(make_pair(-degree[i], i));
-  }
-
-  map<int, int> dfreq;
-  int degeneracy = 0, cnt = 0;
-  vector<int> degenOrder;
-  while (!pq.empty()) {
-    auto p = pq.top();
-    pq.pop();
-    int u = p.second;
-    if (done[u]) continue;
-
-    degenOrder.push_back(u);
-    cnt++;
-    degeneracy = max(degeneracy, -p.first);
-    dfreq[-p.first]++;
-    done[u] = true;
-    for (auto v : Gu[u]) {
-      if (done[v.dst]) continue;
-      degree[v.dst]--;
-      pq.push(make_pair(-degree[v.dst], v.dst));
-    }
-  }
-
-  cerr << "Degeneracy distribution:" << endl;
-  double sum = 0, num = 0;
-  for (auto kv : dfreq) {
-    cerr << kv.first << " " << kv.second << endl;
-    sum += kv.first * kv.second;
-    num += kv.second;
-  }
-  cerr << "Average degeneracy: " << sum / num << endl;
-
-  cerr << "Number of vertice: " << n << endl;
-  cerr << "Number of edges: " << m << endl;
-  cerr << "Average degree: " << 2.0 * m / n << endl;
-  cerr << "Degeneracy: " << degeneracy << endl;
-
-  //TuranShadow(G, CLIQUE_SIZE);
-  //TuranBK(Gu, degenOrder, CLIQUE_SIZE);
-  //TuranBK(Gu, ordering, CLIQUE_SIZE);
-  reverse(degenOrder.begin(), degenOrder.end());
-  TuranBK(Gu, degenOrder, CLIQUE_SIZE);
-  //auto whatAmIDoing = degenOrder;
-  //random_shuffle(whatAmIDoing.begin() + n / 2, whatAmIDoing.end());
-  //TuranBK(Gu, whatAmIDoing, CLIQUE_SIZE);
-  return 0;
 }
+
+#endif /* TURAN_H */
