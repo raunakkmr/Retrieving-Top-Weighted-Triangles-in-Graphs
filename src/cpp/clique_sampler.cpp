@@ -16,7 +16,9 @@ int main(int argc, char* argv[]) {
 
   auto G = read_graph(argv[1]);
   int CLIQUE_SIZE = atoi(argv[2]);
-  int NUM_SAMPLES = atoi(argv[3]);
+  int NUM_SAMPLES_EDGE = atoi(argv[3]);
+  int NUM_SAMPLES_PATH = atoi(argv[4]);
+  int NUM_SAMPLES_CLIQUE = atoi(argv[5]);
 
 #if PRINT_STATISTICS
   cerr << "=============================================" << endl;
@@ -38,16 +40,21 @@ int main(int argc, char* argv[]) {
   cerr << "Degeneracy: " << degeneracy << endl;
 #endif
 
-  auto sampled_tris = edge_sampler(G, NUM_SAMPLES);
+  auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
+  auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   
   if (G.size() < 10000) {
     auto all_tris = brute_force_sampler(G);
-    compare_statistics(all_tris, sampled_tris);
+    cerr << "*** Comparing edge sampling ***" << endl;
+    compare_statistics(all_tris, edge_sampling_tri);
+    cerr << "*** Comparing path sampling ***" << endl;
+    compare_statistics(all_tris, path_sampling_tri);
   } else {
     cerr << "Skipping brute force triangle computations since they are infeasible..." << endl; 
   }
   
-  auto sampled_cliques = clique_sampler(G, CLIQUE_SIZE, NUM_SAMPLES);
-
+  if (CLIQUE_SIZE > 1) {
+    auto sampled_cliques = clique_sampler(G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
+  }
   return 0;
 }

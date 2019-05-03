@@ -86,10 +86,12 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	for (int samp = 0; samp < nsamples; samp++) {
 		auto e = sample_edge();
 		int u = e.src, v = e.dst, w = e.wt;
+		/*
+		// resampling isnt an issue from experimentation
 		if (history.count(make_pair(u, v))) {
 			cerr << "RESAMPLED!!" << endl;
 			history.insert(make_pair(u, v));
-		}
+		}*/
 		map<int, int> vert_to_wt;
 		for (auto e : G[u]) {
 			vert_to_wt[e.dst] = e.wt;
@@ -112,9 +114,81 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	return counter;
 }
 
-set<weighted_triangle> path_sampler(Graph& G) {
-	// TODO: implement raunak's path sampling algorithm
-	return set<weighted_triangle>();
+set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
+	cerr << "=============================================" << endl;
+	cerr << "Running path sampling for triangles" << endl;
+	cerr << "=============================================" << endl;
+	double st = clock();
+	vector<full_edge> edges;
+	map<int, double> weight_sum;
+	vector<vector<int>> node_sums(G.size());
+	for (int u = 0; u < (int) G.size(); u++) {
+		sort(G[u].begin(), G[u].end());
+
+		int prev = 0;
+		for (auto e : G[u]) {
+			weight_sum[u] += e.wt;
+			if (u < e.dst) {
+				edges.push_back({u, e.dst, e.wt});
+			}
+			node_sums[u].push_back(prev + e.wt);
+			prev = node_sums[u].back();
+		}
+	}
+
+	vector<double> sum_edge_weight;
+	double prev = 0;
+	for (auto e : edges) {
+		double weight = e.wt * (weight_sum[e.src] - e.wt) * (weight_sum[e.dst] - e.wt);
+		sum_edge_weight.push_back(weight + prev);
+		prev = sum_edge_weight.back();
+	}
+
+	default_random_engine generator;
+	uniform_real_distribution<double> distribution(0.0, sum_edge_weight.back());
+	auto sample_edge = [&]() {
+		double s = distribution(generator);
+		int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
+		return edges[idx];
+	};
+
+	auto sample_neighbour = [&](int node, int exclude) {
+		int idx;
+		int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, 0}) - G[node].begin();
+
+		// decide weather to sample left side or right side.
+		int s = rand() % (node_sums[node].back() - G[node][exclude_idx].wt);
+		if (exclude_idx == 0 || s >= node_sums[node][exclude_idx-1]) {
+			// right side
+			s = rand() % (node_sums[node].back() - node_sums[node][exclude_idx]);
+			idx = lower_bound(node_sums[node].begin() + exclude_idx, node_sums[node].end(), node_sums[node][exclude_idx] + s) - node_sums[node].begin();
+		} else {
+			// left side
+			s = rand() % node_sums[node][exclude_idx-1];
+			idx = lower_bound(node_sums[node].begin(), node_sums[node].begin() + exclude_idx, s) - node_sums[node].begin();
+		}
+		return G[node][idx];
+	};
+
+	set<weighted_triangle> counter;
+	for (int samps = 0; samps < nsamples; samps++) {
+		auto edge = sample_edge();
+		int u = edge.src, v = edge.dst, w = edge.wt;
+		
+		auto c0 = sample_neighbour(u, v);
+		auto c1 = sample_neighbour(v, u);
+		if (c0.dst == c1.dst) {
+			counter.insert(weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w));
+		}
+	}
+	cerr << "Found " << counter.size() << " triangles." << endl;
+	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+
+	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	cerr << "Total Time (s): " << tot_time << endl;
+	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+
+	return counter;
 }
 
 void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles) {
@@ -125,6 +199,10 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	int num_found = 0;
 	int curr_tri = 0;
 	bool first_break = 0;
+	int bidx = 0;
+	vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
+	//vector<double> breakpoints({0.1, 0.25, 0.5});
+
 	for (auto T : all_triangles) {
 		if (sampled_triangles.count(T)) {
 			num_found++;
@@ -136,16 +214,9 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 			cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " percent of weighted triangles." << endl;
 		}
 
-		if (curr_tri == int(0.1 * all_triangles.size())) {
-			cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top 10%." << endl;
-		}
-
-		if (curr_tri == int(0.25 * all_triangles.size())) {
-			cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top 25%." << endl;
-		}
-
-		if (curr_tri == int(0.50 * all_triangles.size())) {
-			cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top 50%." << endl;
+		if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
+			cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-6) <<"%." << endl;
+			bidx++;
 		}
 	}
 }
@@ -319,10 +390,12 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 	for (int samp = 0; samp < nsamples; samp++) {
 		auto sample = sample_edge();
 		int u = sample.src, v = sample.dst, w = sample.wt;
+		/*
+		// resampling isnt an issue from experimentation
 		if (history.count(make_pair(u, v))) {
+			cerr << "RESAMPLED!!" << endl;
 			history.insert(make_pair(u, v));
-			cerr << "RESAMPLED!!!" << endl;
-		}
+		}*/
 		map<int, int> vert_to_wt_u, vert_to_wt_v;
 		for (auto e : G[u]) {
 			vert_to_wt_u[e.dst] = e.wt;
