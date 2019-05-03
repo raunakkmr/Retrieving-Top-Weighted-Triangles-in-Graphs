@@ -18,7 +18,7 @@ void TuranShadow(Graph& G, int CLIQUE_SIZE) {
 
   priority_queue<tuple<int, int, Shadow>> q;
   for (int i = 0; i < n; i++) {
-    if (G[i].size() < CLIQUE_SIZE - 1) continue;
+    if ((int) G[i].size() < CLIQUE_SIZE - 1) continue;
     Shadow s = {create_shadow(i, G), CLIQUE_SIZE - 1};
     q.push(make_tuple(-int(s.g.size()), i, s));
   }
@@ -35,7 +35,7 @@ void TuranShadow(Graph& G, int CLIQUE_SIZE) {
 
     auto subprob = q.top();
     int deg = -get<0>(subprob);
-    int v = get<1>(subprob);
+    //int v = get<1>(subprob);
     Shadow& S = get<2>(subprob);
     q.pop();
 
@@ -48,7 +48,7 @@ void TuranShadow(Graph& G, int CLIQUE_SIZE) {
       }
 
       int totverts = S.g.size();
-      if (S.g.size() == S.l || S.l <= 2) {
+      if ((int) S.g.size() == S.l || S.l <= 2) {
         // Do some counting here.
         samples_needed++;
         //cerr << "Edge case" << endl;
@@ -64,7 +64,7 @@ void TuranShadow(Graph& G, int CLIQUE_SIZE) {
         } else {
           // Here we recurse.
           for (auto keyval : S.g) {
-            if (keyval.second.size() < S.l - 1) continue;
+            if ((int) keyval.second.size() < S.l - 1) continue;
 
             // Create the graph and add the node to the PQ
             Shadow ns;
@@ -85,7 +85,7 @@ void TuranShadow(Graph& G, int CLIQUE_SIZE) {
 int nedgecase = 0, nsamplingcase = 0;
 int BKPivot(vector<int> R, vector<int> P, vector<int> X, Graph& G, int k) {
   // Get the edge density and such
-  if (P.size() < k) {
+  if ((int) P.size() < k) {
     return 0;
   }
   if (k <= 2) {

@@ -6,6 +6,7 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
+// generic data structures for graphs
 struct full_edge {
   int src, dst, wt;
   bool operator<(const full_edge& o) const {
@@ -16,6 +17,51 @@ struct full_edge {
 
 struct half_edge {
   int dst, wt;
+};
+
+struct weighted_triangle {
+  tuple<int, int, int> vertices;
+  int weight;
+  weighted_triangle(int u, int v, int w, int wt) {
+    int verts[] = {u, v, w};
+    sort(verts, verts+3);
+    vertices = make_tuple(verts[0], verts[1], verts[2]);
+    weight = wt;
+  }
+
+  const bool operator<(const weighted_triangle& o) const {
+    if (weight != o.weight) return weight > o.weight;
+    return vertices < o.vertices;
+  }
+
+  friend ostream& operator<<(ostream& stream, const weighted_triangle& t) {
+    stream << '(' << get<0>(t.vertices) << ", " << get<1>(t.vertices) << ", " << get<2>(t.vertices) << ", " << t.weight << ")";
+    return stream;
+  }
+};
+
+struct weighted_clique {
+  vector<int> vertices;
+  int weight;
+  weighted_clique(vector<int> V, int wt) {
+    sort(V.begin(), V.end());
+    vertices = V;
+    weight = wt;
+  }
+
+  const bool operator<(const weighted_clique& o) const {
+    if (weight != o.weight) return weight > o.weight;
+    return vertices < o.vertices;
+  }
+
+  friend ostream& operator<<(ostream& stream, const weighted_clique& t) {
+    stream << '(';
+    for (const int u : t.vertices) {
+      stream << u << ", ";
+    }
+    stream << t.weight << ")";
+    return stream;
+  }
 };
 
 typedef vector<vector<half_edge>> Graph;
@@ -29,6 +75,7 @@ struct Shadow {
   }
 };
 
+// Computes the induced subgraph of neighbours of c
 template<class InputGraph>
 inline MappedGraph create_shadow(int c, InputGraph& g) {
   map<int, bool> inside;
@@ -52,6 +99,7 @@ struct degeneracy_info {
   vector<int> degenOrder;
 };
 
+// computes the degeneracy ordering of a graph G
 degeneracy_info compute_degeneracy(Graph& G) {
   const int n = G.size();
 
@@ -88,6 +136,50 @@ degeneracy_info compute_degeneracy(Graph& G) {
   retval.degenFreq = dfreq;
   retval.degenOrder = degenOrder;
   return retval;
+}
+
+// filename contains the path and common prefix of the datafiles
+Graph read_graph(string filename) {
+  ifstream simplices(filename + "-simplices.txt", ifstream::in);
+  ifstream nverts(filename + "-nverts.txt", ifstream::in);
+  ifstream times(filename + "-times.txt", ifstream::in);
+
+  cerr << "reading in graph " << filename << endl;
+
+  // no use for the times right now
+  map<int, map<int, int>> weight;
+  map<int, int> label;
+  int ns, nnodes = 0;
+  while (nverts >> ns) {
+    vector<int> simplex(ns);
+    for (int i = 0; i < ns; i++) {
+      simplices >> simplex[i];
+      if (!label.count(simplex[i])) {
+        label[simplex[i]] = nnodes++;
+      }
+    }
+
+    for (int i = 0; i < ns; i++) {
+      for (int j = i+1; j < ns; j++) {
+        weight[simplex[i]][simplex[j]]++;
+        weight[simplex[j]][simplex[i]]++;
+      }
+    }
+  }
+
+  int nedges = 0;
+  Graph G(nnodes);
+  for (auto& e0 : weight) {
+    for (auto& e1 : e0.second) {
+      int u = label[e0.first], v = label[e1.first], w = e1.second;
+      G[u].push_back({v, w});
+      nedges++;
+    }
+  }
+
+  cerr << "read in a graph with " << nnodes << " " << nedges << " edges" << endl;
+  cerr << "Average degree: " << 2.0 * nedges / nnodes << endl;
+  return G;
 }
 
 }
