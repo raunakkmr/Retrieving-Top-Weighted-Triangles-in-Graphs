@@ -32,8 +32,9 @@ set<weighted_triangle> brute_force_sampler(Graph& G) {
 			}
 		}
 	}
-	cerr << "Found " << counter.size() << " triangles. The maximum weight triangle was " << *counter.begin() << endl;
-
+	cerr << "Found " << counter.size() << " triangles." << endl;
+	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+	
 	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	cerr << "Total Time (s): " << tot_time << endl;
 
@@ -174,7 +175,7 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	for (int samps = 0; samps < nsamples; samps++) {
 		auto edge = sample_edge();
 		int u = edge.src, v = edge.dst, w = edge.wt;
-		
+
 		auto c0 = sample_neighbour(u, v);
 		auto c1 = sample_neighbour(v, u);
 		if (c0.dst == c1.dst) {
