@@ -52,6 +52,9 @@ struct weighted_clique {
     vertices = V;
     weight = wt;
   }
+  weighted_clique() {
+    weight = 0;
+  };
 
   const bool operator<(const weighted_clique& o) const {
     if (weight != o.weight) return weight > o.weight;

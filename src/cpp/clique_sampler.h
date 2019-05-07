@@ -2,16 +2,20 @@
 #define CLIQUE_SAMPLER_H
 
 #include <bits/stdc++.h>
+#include "clique_enumerator.h"
+
 using namespace std;
 
 namespace wsdm_2019_graph {
 
 // TODO: implement sample without replacement
 
-set<weighted_triangle> brute_force_sampler(Graph& G) {
-	cerr << "=============================================" << endl;
-	cerr << "Running brute force detection for triangles" << endl;
-	cerr << "=============================================" << endl;
+set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
+	if (diagnostic) {
+		cerr << "=============================================" << endl;
+		cerr << "Running brute force detection for triangles" << endl;
+		cerr << "=============================================" << endl;
+	}
 	double st = clock();
 
 	set<weighted_triangle> counter;
@@ -32,12 +36,13 @@ set<weighted_triangle> brute_force_sampler(Graph& G) {
 			}
 		}
 	}
-	cerr << "Found " << counter.size() << " triangles." << endl;
-	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
-	
-	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
-	cerr << "Total Time (s): " << tot_time << endl;
+	if (diagnostic) {
+		cerr << "Found " << counter.size() << " triangles." << endl;
+		if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
+		double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+		cerr << "Total Time (s): " << tot_time << endl;
+	}
 	return counter;
 }
 
@@ -87,12 +92,12 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	for (int samp = 0; samp < nsamples; samp++) {
 		auto e = sample_edge();
 		int u = e.src, v = e.dst, w = e.wt;
-		/*
 		// resampling isnt an issue from experimentation
 		if (history.count(make_pair(u, v))) {
-			cerr << "RESAMPLED!!" << endl;
-			history.insert(make_pair(u, v));
-		}*/
+			//cerr << "RESAMPLED!!" << endl;
+			continue;
+		}
+		history.insert(make_pair(u, v));
 		map<int, int> vert_to_wt;
 		for (auto e : G[u]) {
 			vert_to_wt[e.dst] = e.wt;
@@ -181,6 +186,22 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 		if (c0.dst == c1.dst) {
 			counter.insert(weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w));
 		}
+
+		/*
+		map<int, int> seen;
+		for (int s = 0; s < G[v].size(); s++) {
+			auto c0 = sample_neighbour(u, v);
+			seen[c0.dst] = c0.wt;
+		}
+
+		for (int s = 0; s < G[v].size(); s++) {
+			auto c1 = G[v][s];//sample_neighbour(v, u);
+			if (seen.count(c1.dst)) {
+				// todo: use product weight here
+				counter.insert(weighted_triangle(u, v, c1.dst, seen[c1.dst] + c1.wt + w));
+			}
+		}
+		*/
 	}
 	cerr << "Found " << counter.size() << " triangles." << endl;
 	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
@@ -190,6 +211,55 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
 
 	return counter;
+}
+
+set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
+	cerr << "=============================================" << endl;
+	cerr << "Running heavy light sampling for triangles" << endl;
+	cerr << "=============================================" << endl;
+	double st = clock();
+
+	vector<full_edge> edges;
+	for (int i = 0; i < (int) G[i].size(); i++) {
+		for (auto e : G[i]) {
+			if (i < e.dst) {
+				edges.push_back({i, e.dst, e.wt});
+			}
+		}
+	}
+	sort(edges.rbegin(), edges.rend());
+
+	Graph Gh;
+	for (int i = 0; i < (int) (p * edges.size()); i++) {
+		Gh.resize(max(edges[i].dst+1, (int) Gh.size()));
+		Gh[edges[i].src].push_back({edges[i].dst, edges[i].wt});
+		Gh[edges[i].dst].push_back({edges[i].src, edges[i].wt});
+	}
+	auto counter = brute_force_sampler(Gh, false);
+
+	for (int i = (int) (p * edges.size()); i < (int) edges.size(); i++) {
+		int u = edges[i].src, v = edges[i].dst, w = edges[i].wt;
+		if (u >= (int) Gh.size() || v >= (int) Gh.size()) continue;
+		map<int, int> seen;
+		for (auto e : Gh[u]) {
+			seen[e.dst] = e.wt;
+		}
+
+		for (auto e : Gh[v]) {
+			if (seen.count(e.dst)) {
+				counter.insert(weighted_triangle(u, v, e.dst, e.wt + seen[e.dst] + w));
+			}
+		}
+	}
+
+	cerr << "Found " << counter.size() << " triangles." << endl;
+	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+
+	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	cerr << "Total Time (s): " << tot_time << endl;
+
+	return counter;
+
 }
 
 void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles) {
@@ -248,6 +318,7 @@ set<weighted_clique> enumerate_cliques(Graph& G, int k) {
 	for (int i = 0; i < (int) G.size(); i++) {
 		removed[i] = false;
 		degree[i] = G[i].size();
+
 		if (degree[i] < k-1) {
 			q.push(i);
 			removed[i] = true;
@@ -276,7 +347,7 @@ set<weighted_clique> enumerate_cliques(Graph& G, int k) {
 	}
 
 	for (int i = 0; i < (int) G.size(); i++) {
-		if (removed[i]) continue;
+		if (removed[i] || degree[i] < k-1) continue;
 
 		int nedges = 0;
 		Graph subgraph;
@@ -339,6 +410,10 @@ set<weighted_clique> enumerate_cliques(Graph& G, int k) {
 		}
 
 		removed[i] = true;
+
+		for (auto e : G[i]) {
+			degree[e.dst]--;
+		}
 	}
 	return retval;
 }
@@ -349,13 +424,43 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 	cerr << "=============================================" << endl;
 	double st = clock();
 
+	// Prune the graph first
+	vector<int> degree(G.size());
+	vector<bool> removed(G.size());
+	{
+		queue<int> q;
+		for (int i = 0; i < (int) G.size(); i++) {
+			removed[i] = false;
+			degree[i] = G[i].size();
+
+			if (degree[i] < k-1) {
+				q.push(i);
+				removed[i] = true;
+			}
+		}
+		while (!q.empty()) {
+			int u = q.front();
+			q.pop();
+
+			for (auto e : G[u]) {
+				degree[e.dst]--;
+				if (!removed[e.dst] && degree[e.dst] < k-1) {
+					removed[e.dst] = true;
+					q.push(e.dst);
+				}
+			}
+		}
+	}
+
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
 	map<int, map<int, int>> adjmat;
 	for (int u = 0; u < (int) G.size(); u++) {
+		if (removed[u]) continue;
 		for (auto e : G[u]) {
 			int v = e.dst, w = e.wt;
 			if (u > v) continue;
+			if (removed[v]) continue;
 			edge_distribution[e.wt].push_back({u, v, w});
 			adjmat[u][v] = adjmat[v][u] = w;
 		}
@@ -391,19 +496,20 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 	for (int samp = 0; samp < nsamples; samp++) {
 		auto sample = sample_edge();
 		int u = sample.src, v = sample.dst, w = sample.wt;
-		/*
-		// resampling isnt an issue from experimentation
 		if (history.count(make_pair(u, v))) {
-			cerr << "RESAMPLED!!" << endl;
-			history.insert(make_pair(u, v));
-		}*/
+			//cerr << "RESAMPLED!!" << endl;
+			continue;
+		}
+		history.insert(make_pair(u, v));
 		map<int, int> vert_to_wt_u, vert_to_wt_v;
 		for (auto e : G[u]) {
+			if (removed[e.dst]) continue;
 			vert_to_wt_u[e.dst] = e.wt;
 		}
 
 		vector<int> common_nbrs;
 		for (auto e : G[v]) {
+			if (removed[e.dst]) continue;
 			vert_to_wt_v[e.dst] = e.wt;
 			if (vert_to_wt_u.count(e.dst)) {
 				// todo: replace with p means
@@ -443,8 +549,58 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 		}
 
 		if (nedges < (k-2) * (k-3) / 2) continue;
-		set<weighted_clique> cliques = enumerate_cliques(subgraph, k-2);
+		set<weighted_clique> cliques;
+		if (k < 5) {
+			cliques = enumerate_cliques(subgraph, k-2);
+		} else {
+			cliques = find_cliques(subgraph, k-2);
+		}
+#if 0
+		/*
+		cerr << "Computing on subgraph with " << common_nbrs.size() << " nodes and " << nedges << " edges" << endl;
+		int max_seen = 0;
+		static map<int, int> freq;
+		for (int u : common_nbrs) {
+			freq[u]++;
+			max_seen = max(freq[u], max_seen);
+		}
+		cerr << "Current max: " << max_seen << endl;
+		*/
 
+		// Lets do a two-way pruning:
+		// After we find the (k-2)-cliques corresponding to this edge,
+		// we can take each clique and try to complete it into a k-clique.
+		// Then we can delete all of the edges here.
+		for (auto clique : cliques) {
+			// unlabelling phase
+			map<int, int> seen, wsum;
+			vector<int> nbrs;
+			for (int& vert : clique.vertices) {
+				vert = unlabel[vert];
+				for (auto e : G[vert]) {
+					seen[e.dst]++;
+					wsum[e.dst] += e.wt;
+					if (seen[e.dst] == k-2) {
+						nbrs.push_back(e.dst);
+					}
+				}
+			}
+
+			cerr << "found " << nbrs.size() << " common neighbours" << endl;
+			for (int i = 0; i < (int) nbrs.size(); i++) {
+				for (int j = i + 1; j < (int) nbrs.size(); j++) {
+					if (adjmat[nbrs[i]].count(nbrs[j])) {
+						weighted_clique cnew = clique;
+						cnew.vertices.push_back(nbrs[i]);
+						cnew.vertices.push_back(nbrs[j]);
+						cnew.weight += wsum[nbrs[i]] + wsum[nbrs[j]] + adjmat[nbrs[i]][nbrs[j]];
+						sort(cnew.vertices.begin(), cnew.vertices.end());
+						counter.insert(cnew);
+					}
+				}
+			}
+		}
+#else
 		for (auto clique : cliques) {
 			// unlabelling phase
 			set<int> seen;
@@ -469,6 +625,8 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 			sort(clique.vertices.begin(), clique.vertices.end());
 			counter.insert(clique);
 		}
+#endif
+
 	}
 	cerr << "Found " << counter.size() << " " << k << "-cliques." << endl;
 	if (counter.size()) cerr << "The maximum weight " << k << "-clique was " << *counter.begin() << endl;
