@@ -104,18 +104,11 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples, double keep_prob = 0
 			vert_to_wt[e.dst] = e.wt;
 		}
 
-		vector<weighted_triangle> tlist;		
 		for (auto e : G[v]) {
 			if (vert_to_wt.count(e.dst)) {
 				// todo: replace with p means
-				//counter.insert(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
-				tlist.push_back(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
+				counter.insert(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
 			}
-		}
-		sort(tlist.begin(), tlist.end());
-
-		for (int i = 0; i < int(ceil(keep_prob * tlist.size())); i++) {
-			counter.insert(tlist[i]);
 		}
 	}
 	cerr << "Found " << counter.size() << " triangles." << endl;
