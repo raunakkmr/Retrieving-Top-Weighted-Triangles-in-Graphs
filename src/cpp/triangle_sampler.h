@@ -47,7 +47,7 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 	return counter;
 }
 
-set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
+set<weighted_triangle> edge_sampler(Graph& G, int nsamples, double keep_prob = 0.01) {
 	cerr << "=============================================" << endl;
 	cerr << "Running edge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
@@ -104,11 +104,18 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 			vert_to_wt[e.dst] = e.wt;
 		}
 
+		vector<weighted_triangle> tlist;		
 		for (auto e : G[v]) {
 			if (vert_to_wt.count(e.dst)) {
 				// todo: replace with p means
-				counter.insert(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
+				//counter.insert(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
+				tlist.push_back(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
 			}
+		}
+		sort(tlist.begin(), tlist.end());
+
+		for (int i = 0; i < int(ceil(keep_prob * tlist.size())); i++) {
+			counter.insert(tlist[i]);
 		}
 	}
 	cerr << "Found " << counter.size() << " triangles." << endl;
@@ -221,7 +228,7 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	double st = clock();
 
 	vector<full_edge> edges;
-	for (int i = 0; i < (int) G[i].size(); i++) {
+	for (int i = 0; i < (int) G.size(); i++) {
 		for (auto e : G[i]) {
 			if (i < e.dst) {
 				edges.push_back({i, e.dst, e.wt});
@@ -230,7 +237,7 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	}
 	sort(edges.rbegin(), edges.rend());
 
-	Graph Gh;
+	Graph Gh, Gl;
 	for (int i = 0; i < (int) (p * edges.size()); i++) {
 		Gh.resize(max(edges[i].dst+1, (int) Gh.size()));
 		Gh[edges[i].src].push_back({edges[i].dst, edges[i].wt});
@@ -238,6 +245,17 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	}
 	auto counter = brute_force_sampler(Gh, false);
 
+/*
+	for (int i = (int) (p * edges.size()); i < (int) edges.size(); i++) {
+		Gl.resize(max(edges[i].dst+1, (int) Gl.size()));
+		Gl[edges[i].src].push_back({edges[i].dst, edges[i].wt});
+		Gl[edges[i].dst].push_back({edges[i].src, edges[i].wt});
+	}
+	auto counter2 = brute_force_sampler(Gl, false);
+	for (auto t : counter2) counter.insert(t);
+//*/
+
+///*
 	for (int i = (int) (p * edges.size()); i < (int) edges.size(); i++) {
 		int u = edges[i].src, v = edges[i].dst, w = edges[i].wt;
 		if (u >= (int) Gh.size() || v >= (int) Gh.size()) continue;
@@ -252,7 +270,24 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 			}
 		}
 	}
+//*/
 
+/*
+	for (int i = 0; i < (int) (p * edges.size()); i++) {
+		int u = edges[i].src, v = edges[i].dst, w = edges[i].wt;
+		if (u >= (int) Gl.size() || v >= (int) Gl.size()) continue;
+		map<int, int> seen;
+		for (auto e : Gl[u]) {
+			seen[e.dst] = e.wt;
+		}
+
+		for (auto e : Gl[v]) {
+			if (seen.count(e.dst)) {
+				counter.insert(weighted_triangle(u, v, e.dst, e.wt + seen[e.dst] + w));
+			}
+		}
+	}
+//*/
 	cerr << "Found " << counter.size() << " triangles." << endl;
 	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 

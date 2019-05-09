@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
-  auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.5);
+  auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
   
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
