@@ -3,6 +3,7 @@
 #include "turan.h"
 #include "graph.h"
 #include "clique_sampler.h"
+#include "triangle_sampler.h"
 
 using namespace std;
 using namespace wsdm_2019_graph;

@@ -18,8 +18,8 @@ struct full_edge {
 struct half_edge {
   int dst, wt;
   const bool operator<(const half_edge& o) const {
-    if (dst == o.dst) return wt > o.wt;
-    return dst < o.dst;
+    if (wt != o.wt) return wt < o.wt;
+    return dst > o.dst;
   }
 };
 
