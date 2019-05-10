@@ -17,9 +17,10 @@ struct full_edge {
 
 struct half_edge {
   int dst, wt;
+  // THIS CANNOT BE CHANGED SINCE IT IS USED BY PATH SAMPLER
   const bool operator<(const half_edge& o) const {
-    if (wt != o.wt) return wt < o.wt;
-    return dst > o.dst;
+    if (dst == o.dst) return wt > o.wt;
+    return dst < o.dst;
   }
 };
 
