@@ -19,22 +19,35 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 	}
 	double st = clock();
 
+	// Can use degeneracy ordering to speed up brute force
+	// However, on certain tests it didnt have great performance.
 	set<weighted_triangle> counter;
+
+	// TODO: Can replace maps with normal arrays in most of these procedures.
+	// Will only be useful in single threaded case.
+	vector<int> vert_to_wt(G.size());
 	for (int u = 0; u < (int) G.size(); u++) {
 		for (auto e : G[u]) {
-			int v = e.dst, w = e.wt;
-			if (u > v) continue;
-			map<int, int> vert_to_wt;
-			for (auto e : G[u]) {
-				vert_to_wt[e.dst] = e.wt;
-			}
+			if (e.dst < u) continue;
+			vert_to_wt[e.dst] = e.wt;
+		}
 
-			for (auto e : G[v]) {
-				if (vert_to_wt.count(e.dst)) {
+		for (auto e : G[u]) {
+			int v = e.dst, w = e.wt;
+			if (v < u) continue;
+
+			for (auto ev : G[v]) {
+				if (ev.dst < v) continue;
+				if (vert_to_wt[ev.dst]) {
 					// todo: replace with p means
-					counter.insert(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
+					counter.insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[e.dst] + w));
 				}
 			}
+		}
+
+		for (auto e : G[u]) {
+			if (e.dst < u) continue;
+			vert_to_wt[e.dst] = 0;
 		}
 	}
 	if (diagnostic) {
@@ -121,6 +134,9 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples, double keep_prob = 0
 	return counter;
 }
 
+
+// 4x speedup possible with an optimal random number implementation
+// this isnt enough to get asymptotically past
 set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	cerr << "=============================================" << endl;
 	cerr << "Running path sampling for triangles" << endl;
@@ -311,7 +327,7 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 
 		if (num_found != curr_tri && !first_break) {
 			first_break = true;
-			cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " percent of weighted triangles." << endl;
+			cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;
 		}
 
 		if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
