@@ -185,8 +185,8 @@ Graph read_graph(string filename) {
     }
   }
 
-  cerr << "read in a graph with " << nnodes << " " << nedges << " edges" << endl;
-  cerr << "Average degree: " << 2.0 * nedges / nnodes << endl;
+  cerr << "read in a graph with " << nnodes << " " << nedges / 2 << " edges" << endl;
+  cerr << "Average degree: " << nedges / nnodes << endl;
   return G;
 }
 

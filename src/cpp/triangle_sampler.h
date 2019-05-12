@@ -40,7 +40,7 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 				if (ev.dst < v) continue;
 				if (vert_to_wt[ev.dst]) {
 					// todo: replace with p means
-					counter.insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[e.dst] + w));
+					counter.insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
 				}
 			}
 		}
@@ -60,7 +60,7 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 	return counter;
 }
 
-set<weighted_triangle> edge_sampler(Graph& G, int nsamples, double keep_prob = 0.01) {
+set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	cerr << "=============================================" << endl;
 	cerr << "Running edge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
@@ -113,14 +113,14 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples, double keep_prob = 0
 		}
 		history.insert(make_pair(u, v));
 		map<int, int> vert_to_wt;
-		for (auto e : G[u]) {
-			vert_to_wt[e.dst] = e.wt;
+		for (auto eu : G[u]) {
+			vert_to_wt[eu.dst] = eu.wt;
 		}
 
-		for (auto e : G[v]) {
-			if (vert_to_wt.count(e.dst)) {
+		for (auto ev : G[v]) {
+			if (vert_to_wt.count(ev.dst)) {
 				// todo: replace with p means
-				counter.insert(weighted_triangle(u, v, e.dst, e.wt + vert_to_wt[e.dst] + w));
+				counter.insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
 			}
 		}
 	}
@@ -179,7 +179,7 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 		int idx;
 		int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, 0}) - G[node].begin();
 
-		// decide weather to sample left side or right side.
+		// decide whether to sample left side or right side.
 		int s = rand() % (node_sums[node].back() - G[node][exclude_idx].wt);
 		if (exclude_idx == 0 || s >= node_sums[node][exclude_idx-1]) {
 			// right side
