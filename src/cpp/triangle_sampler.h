@@ -319,9 +319,16 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
 	//vector<double> breakpoints({0.1, 0.25, 0.5});
 
+	int num = min(25, (int)sampled_triangles.size());
+	vector<int> ranks(num);
+	vector<long double> percentiles(num);
 	for (auto T : all_triangles) {
 		if (sampled_triangles.count(T)) {
 			num_found++;
+			if (num_found-1 < num) {
+				ranks[num_found-1] = curr_tri+1;
+				percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_triangles.size();
+			}
 		}
 		curr_tri++;
 
@@ -335,6 +342,23 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 			bidx++;
 		}
 	}
+
+	cerr << "=============================================" << endl;
+	cerr << "Ranks of top " << num << " triangles" << endl;
+	cerr << "=============================================" << endl;
+	for (auto rank : ranks) {
+		cerr << rank << " ";
+	}
+	cerr << endl;
+	cerr << "=============================================" << endl;
+	cerr << "Percentiles of top " << num << " triangles" << endl;
+	cerr << "=============================================" << endl;
+	for (auto percentile: percentiles) {
+		cerr << percentile << " ";
+	}
+	cerr << endl;
+
+	cerr << endl;
 }
 
 }
