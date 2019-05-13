@@ -8,6 +8,7 @@
 using namespace std;
 using namespace wsdm_2019_graph;
 
+#define PRINT_ARGS 1
 #define PRINT_STATISTICS 1
 
 int main(int argc, char* argv[]) {
@@ -21,6 +22,17 @@ int main(int argc, char* argv[]) {
   int NUM_SAMPLES_PATH = atoi(argv[4]);
   int NUM_SAMPLES_CLIQUE = atoi(argv[5]);
   int CHECK_TRIANGLES = atoi(argv[6]);
+  int K = atoi(argv[7]);
+
+#if PRINT_ARGS
+  cerr << "=============================================" << endl;
+  cerr << "ARGUMENTS" << endl;
+  cerr << "=============================================" << endl;
+  cerr << "Dataset: " << argv[1] << endl;
+  cerr << "NUM_SAMPLES_EDGE: " << NUM_SAMPLES_EDGE << endl;
+  cerr << "K: " << K << endl;
+  cerr << endl;
+#endif
 
 #if PRINT_STATISTICS
   cerr << "=============================================" << endl;
@@ -40,6 +52,7 @@ int main(int argc, char* argv[]) {
   }
   cerr << "Average degeneracy: " << sum / num << endl;
   cerr << "Degeneracy: " << degeneracy << endl;
+  cerr << endl;
 #endif
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
@@ -48,12 +61,16 @@ int main(int argc, char* argv[]) {
   
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
-    cerr << "*** Comparing edge sampling ***" << endl;
-    compare_statistics(all_tris, edge_sampling_tri);
-    cerr << "*** Comparing path sampling ***" << endl;
-    compare_statistics(all_tris, path_sampling_tri);
+    if (NUM_SAMPLES_EDGE > 0) {
+      cerr << "*** Comparing edge sampling ***" << endl;
+      compare_statistics(all_tris, edge_sampling_tri, K);
+    }
+    if (NUM_SAMPLES_PATH > 0) {
+      cerr << "*** Comparing path sampling ***" << endl;
+      compare_statistics(all_tris, path_sampling_tri, K);
+    }
     cerr << "*** Comparing heavy light sampling ***" << endl;
-    compare_statistics(all_tris, heavy_light_sampling_tri);
+    compare_statistics(all_tris, heavy_light_sampling_tri, K);
   } else {
     cerr << "Skipping brute force triangle computations since it seems to be infeasible..." << endl; 
   }

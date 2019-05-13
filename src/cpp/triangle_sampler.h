@@ -56,6 +56,7 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 
 		double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 		cerr << "Total Time (s): " << tot_time << endl;
+		cerr << endl;
 	}
 	return counter;
 }
@@ -130,6 +131,7 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	cerr << "Total Time (s): " << tot_time << endl;
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+	cerr << endl;
 
 	return counter;
 }
@@ -226,6 +228,7 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	cerr << "Total Time (s): " << tot_time << endl;
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+	cerr << endl;
 
 	return counter;
 }
@@ -302,12 +305,13 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 
 	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	cerr << "Total Time (s): " << tot_time << endl;
+	cerr << endl;
 
 	return counter;
 
 }
 
-void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles) {
+void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles, int K) {
 	cerr << "=============================================" << endl;
 	cerr << "Comparing sampling statistics" << endl;
 	cerr << "=============================================" << endl;
@@ -319,18 +323,23 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
 	//vector<double> breakpoints({0.1, 0.25, 0.5});
 
-	int num = min(25, (int)sampled_triangles.size());
-	vector<int> ranks(num);
-	vector<long double> percentiles(num);
+	int k = min(K, (int)sampled_triangles.size());
+	vector<int> ranks(k), top_sampled_weights(k), top_true_weights(k);
+	vector<long double> percentiles(k);
+
 	for (auto T : all_triangles) {
 		if (sampled_triangles.count(T)) {
 			num_found++;
-			if (num_found-1 < num) {
+			if (num_found < k+1) {
 				ranks[num_found-1] = curr_tri+1;
 				percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_triangles.size();
+				top_sampled_weights[num_found-1] = T.weight;
 			}
 		}
 		curr_tri++;
+		if (curr_tri < k+1) {
+			top_true_weights[curr_tri-1] = T.weight;
+		}
 
 		if (num_found != curr_tri && !first_break) {
 			first_break = true;
@@ -344,17 +353,42 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	}
 
 	cerr << "=============================================" << endl;
-	cerr << "Ranks of top " << num << " triangles" << endl;
+	cerr << "Ranks of top " << k << " triangles" << endl;
 	cerr << "=============================================" << endl;
 	for (auto rank : ranks) {
 		cerr << rank << " ";
 	}
 	cerr << endl;
+
 	cerr << "=============================================" << endl;
-	cerr << "Percentiles of top " << num << " triangles" << endl;
+	cerr << "Percentiles of top " << k << " triangles" << endl;
 	cerr << "=============================================" << endl;
 	for (auto percentile: percentiles) {
 		cerr << percentile << " ";
+	}
+	cerr << endl;
+
+	long double accuracy = 0.0;
+	for (int i = 0; i < k; i++) {
+		accuracy += (ranks[i] <= k);
+	}
+	accuracy /= k;
+	cerr << "=============================================" << endl;
+	cerr << "Accuracy: " << accuracy << endl;
+	cerr << "=============================================" << endl;
+
+	cerr << "=============================================" << endl;
+	cerr << "Weights of true top " << k << " triangles" << endl;
+	cerr << "=============================================" << endl;
+	for (const auto &wt : top_true_weights) {
+		cerr << wt << " ";
+	}
+	cerr << endl;
+	cerr << "=============================================" << endl;
+	cerr << "Weights of sampled top " << k << " triangles" << endl;
+	cerr << "=============================================" << endl;
+	for (const auto &wt : top_sampled_weights) {
+		cerr << wt << " ";
 	}
 	cerr << endl;
 
