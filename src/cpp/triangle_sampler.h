@@ -347,6 +347,9 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 		// the exponent of the power law governing the edge weights.
 		// Back of the envelope calculations indicate
 		// 	magic = 2 - 2/(b + 1).
+		// Experimental evidence suggests the exponent is around 1.7 to 2.
+		// This gives a magic range of [1.25, 1.33] which fits with what 
+		// we observed.
 		double magic = 1.25;
 		if (pow(ej.wt, magic) > ei.wt) {
 			// Advance j, H2 and H3 cases (at least two heavy)
