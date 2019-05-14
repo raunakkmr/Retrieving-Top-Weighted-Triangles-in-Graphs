@@ -307,6 +307,129 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 
 }
 
+
+set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
+	cerr << "=============================================" << endl;
+	cerr << "Running adaptive heavy light for triangles" << endl;
+	cerr << "=============================================" << endl;
+	double st = clock();
+
+	vector<full_edge> edges;
+	vector<map<int, int>> exists(G.size());
+	for (int i = 0; i < (int) G.size(); i++) {
+		for (auto e : G[i]) {
+			if (i < e.dst) {
+				edges.push_back({i, e.dst, e.wt});
+			}
+			exists[i][e.dst] = e.wt;
+			exists[e.dst][i] = e.wt;
+		}
+	}
+	sort(edges.rbegin(), edges.rend());
+
+	set<weighted_triangle> counter, topk;
+
+	Graph Gh;
+	int hi = 0, hj = 0;
+	double threshold = numeric_limits<double>::max();
+	counter.insert(weighted_triangle(0, 0, 0, threshold));
+	auto curr = counter.begin();
+	while ((int) topk.size() < k && hj < (int) edges.size()) {
+		// Version where we use a threshold
+		auto ei = edges[hi], ej = edges[hj];
+		Gh.resize(max(ej.dst+1, (int) Gh.size()));
+
+		// TODO: COMPUTE THE MAGIC EXPONENT THROUGH SOME THEORY
+		// This exponent should be roughly 2 - O(poly(1/beta)), where beta is 
+		// the exponent of the power law governing the edge weights.
+		double magic = 1.25;
+		if (pow(ej.wt, magic) > ei.wt) {
+			// Advance j, H2 and H3 cases (at least two heavy)
+			// Check for P2s with incoming ej
+			for (auto e : Gh[ej.src]) {
+				if (exists[e.dst].count(ej.dst)) {
+					int weight = ej.wt + e.wt + exists[ej.dst][e.dst];
+					weighted_triangle T(e.dst, ej.dst, ej.src, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+			for (auto e : Gh[ej.dst]) {
+				if (exists[e.dst].count(ej.src)) {
+					int weight = ej.wt + e.wt + exists[ej.src][e.dst];
+					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+
+			// Check for all 3 heavy
+			map<int, int> vert_to_wt;
+			for (auto e : Gh[ej.src]) {
+				vert_to_wt[e.dst] = e.wt;
+			}
+			for (auto e : Gh[ej.dst]) {
+				if (vert_to_wt.count(e.dst)) {
+					int weight = ej.wt + e.wt + vert_to_wt[e.dst];
+					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+
+			// Remove from light edges
+			exists[ej.src].erase(ej.dst);
+			exists[ej.dst].erase(ej.src);
+			hj++;
+
+			Gh[ej.src].push_back({ej.dst, ej.wt});
+			Gh[ej.dst].push_back({ej.src, ej.wt});
+		} else {
+			// Advance i, H1 case (exactly 1 heavy)
+			map<int, int> vert_to_wt;
+			for (auto kv : exists[ei.src]) {
+				vert_to_wt[kv.first] = kv.second;
+			}
+			for (auto kv : exists[ei.dst]) {
+				if (vert_to_wt.count(kv.first)) {
+					int weight = ei.wt + kv.second + vert_to_wt[kv.first];
+					weighted_triangle T(kv.first, ei.src, ei.dst, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+			hi++;
+		}
+		
+		threshold = 2 * ej.wt + ei.wt - 1;
+		while (curr != counter.end() && curr->weight >= threshold) {
+			topk.insert(*curr);
+			curr++;
+		}
+		if (curr == counter.end()) {
+			curr--;
+		}
+	}
+	counter.erase(counter.begin());
+	cerr << "Found " << counter.size() << " triangles." << endl;
+	cerr << "Out of these, the top " << topk.size() << " are found for sure." << endl;
+	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+
+	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	cerr << "Total Time (s): " << tot_time << endl;
+
+	return counter;
+
+}
+
 void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles) {
 	cerr << "=============================================" << endl;
 	cerr << "Comparing sampling statistics" << endl;
@@ -331,7 +454,7 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 		}
 
 		if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
-			cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-6) <<"%." << endl;
+			cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
 			bidx++;
 		}
 	}

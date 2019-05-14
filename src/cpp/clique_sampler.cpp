@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
+  auto adaptive_heavy_light_tri = adaptive_heavy_light(G, 100);
   
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
@@ -54,6 +55,42 @@ int main(int argc, char* argv[]) {
     compare_statistics(all_tris, path_sampling_tri);
     cerr << "*** Comparing heavy light sampling ***" << endl;
     compare_statistics(all_tris, heavy_light_sampling_tri);
+    cerr << "*** Comparing adaptive heavy light ***" << endl;
+    compare_statistics(all_tris, adaptive_heavy_light_tri);
+
+    // Write out triangles to a file
+    bool write_out_stats = false;
+    if (write_out_stats) {
+      ofstream triangle_file("triangles.txt");
+      map<int, int> num_tris;
+      for (auto t : all_tris) {
+        triangle_file << t.weight << '\n';
+        num_tris[get<0>(t.vertices)]++;
+        num_tris[get<1>(t.vertices)]++;
+        num_tris[get<2>(t.vertices)]++;
+      }
+      triangle_file.close();
+
+      ofstream tris_to_weight_file("ntris-to-weight.txt");
+      for (int i = 0; i < (int) G[i].size(); i++) {
+        double weight_sum = 0;
+        for (auto e : G[i]) {
+          weight_sum += e.wt;
+        }
+        tris_to_weight_file << weight_sum << " " << num_tris[i] << '\n';
+      }
+      tris_to_weight_file.close();
+
+      ofstream degree_file("degree-to-weight.txt");
+      for (int i = 0; i < (int) G[i].size(); i++) {
+        double weight_sum = 0;
+        for (auto e : G[i]) {
+          weight_sum += e.wt;
+        }
+        degree_file << G[i].size() << " " << weight_sum << '\n';
+      }
+      degree_file.close();
+    }
   } else {
     cerr << "Skipping brute force triangle computations since it seems to be infeasible..." << endl; 
   }
