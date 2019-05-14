@@ -345,6 +345,8 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 		// TODO: COMPUTE THE MAGIC EXPONENT THROUGH SOME THEORY
 		// This exponent should be roughly 2 - O(poly(1/beta)), where beta is 
 		// the exponent of the power law governing the edge weights.
+		// Back of the envelope calculations indicate
+		// 	magic = 2 - 2/(b + 1).
 		double magic = 1.25;
 		if (pow(ej.wt, magic) > ei.wt) {
 			// Advance j, H2 and H3 cases (at least two heavy)
