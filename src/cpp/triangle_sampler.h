@@ -337,7 +337,7 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 	double threshold = numeric_limits<double>::max();
 	counter.insert(weighted_triangle(0, 0, 0, threshold));
 	auto curr = counter.begin();
-	while ((int) topk.size() < k && hj < (int) edges.size()) {
+	while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
 		// Version where we use a threshold
 		auto ei = edges[hi], ej = edges[hj];
 		Gh.resize(max(ej.dst+1, (int) Gh.size()));
@@ -421,15 +421,18 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 			curr--;
 		}
 	}
+	// Removing the dummy triangle of weight INF. There should be one
+	// in topk as well. So topk actually has one fewer triangle than it reports.
 	counter.erase(counter.begin());
+
 	cerr << "Found " << counter.size() << " triangles." << endl;
-	cerr << "Out of these, the top " << topk.size() << " are found for sure." << endl;
+	cerr << "Out of these, the top " << int(topk.size()) - 1 << " are found for sure." << endl;
 	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
 	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	cerr << "Total Time (s): " << tot_time << endl;
 	cerr << endl;
-	
+
 	return counter;
 
 }
