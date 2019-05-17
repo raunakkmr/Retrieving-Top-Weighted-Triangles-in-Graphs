@@ -442,6 +442,138 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 
 }
 
+// Same as adaptive heavy light EXCEPT the magic 
+// constant is computed on the fly automatically
+set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
+	cerr << "=============================================" << endl;
+	cerr << "Running auto thresholded heavy light for triangles" << endl;
+	cerr << "=============================================" << endl;
+	double st = clock();
+
+	vector<full_edge> edges;
+	vector<map<int, int>> exists(G.size());
+	map<int, int> edge_distribution;
+	edge_distribution[0] = 1; // Assuming positive weight edges
+	for (int i = 0; i < (int) G.size(); i++) {
+		for (auto e : G[i]) {
+			if (i < e.dst) {
+				edges.push_back({i, e.dst, e.wt});
+				edge_distribution[e.wt]++;
+			}
+			exists[i][e.dst] = e.wt;
+			exists[e.dst][i] = e.wt;
+		}
+	}
+	sort(edges.rbegin(), edges.rend());
+
+	set<weighted_triangle> counter, topk;
+
+	Graph Gh;
+	int hi = 0, hj = 0;
+	double threshold = numeric_limits<double>::max();
+	counter.insert(weighted_triangle(0, 0, 0, threshold));
+	auto curr = counter.begin();
+	while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
+		// Version where we use a threshold
+		auto ei = edges[hi], ej = edges[hj];
+		Gh.resize(max(ej.dst+1, (int) Gh.size()));
+
+		double delta_ei = double(ei.wt - (--edge_distribution.lower_bound(ei.wt))->first) / edge_distribution[ei.wt];
+		double delta_ej = double(ej.wt - (--edge_distribution.lower_bound(ej.wt))->first) / edge_distribution[ej.wt];
+		double ei_cost = exists[ei.src].size() + exists[ei.dst].size();
+		double ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size());
+
+		if (delta_ej / ej_cost > delta_ei / ei_cost) {
+			// Advance j, H2 and H3 cases (at least two heavy)
+			// Check for P2s with incoming ej
+			for (auto e : Gh[ej.src]) {
+				if (exists[e.dst].count(ej.dst)) {
+					int weight = ej.wt + e.wt + exists[ej.dst][e.dst];
+					weighted_triangle T(e.dst, ej.dst, ej.src, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+			for (auto e : Gh[ej.dst]) {
+				if (exists[e.dst].count(ej.src)) {
+					int weight = ej.wt + e.wt + exists[ej.src][e.dst];
+					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+
+			// Check for all 3 heavy
+			map<int, int> vert_to_wt;
+			for (auto e : Gh[ej.src]) {
+				vert_to_wt[e.dst] = e.wt;
+			}
+			for (auto e : Gh[ej.dst]) {
+				if (vert_to_wt.count(e.dst)) {
+					int weight = ej.wt + e.wt + vert_to_wt[e.dst];
+					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+
+			// Remove from light edges
+			exists[ej.src].erase(ej.dst);
+			exists[ej.dst].erase(ej.src);
+			hj++;
+
+			Gh[ej.src].push_back({ej.dst, ej.wt});
+			Gh[ej.dst].push_back({ej.src, ej.wt});
+		} else {
+			// Advance i, H1 case (exactly 1 heavy)
+			map<int, int> vert_to_wt;
+			for (auto kv : exists[ei.src]) {
+				vert_to_wt[kv.first] = kv.second;
+			}
+			for (auto kv : exists[ei.dst]) {
+				if (vert_to_wt.count(kv.first)) {
+					int weight = ei.wt + kv.second + vert_to_wt[kv.first];
+					weighted_triangle T(kv.first, ei.src, ei.dst, weight);
+					if (weight >= threshold) {
+						topk.insert(T);
+					}
+					counter.insert(T);
+				}
+			}
+			hi++;
+		}
+		
+		threshold = 2 * ej.wt + ei.wt - 1;
+		while (curr != counter.end() && curr->weight >= threshold) {
+			topk.insert(*curr);
+			curr++;
+		}
+		if (curr == counter.end()) {
+			curr--;
+		}
+	}
+	// Removing the dummy triangle of weight INF. There should be one
+	// in topk as well. So topk actually has one fewer triangle than it reports.
+	counter.erase(counter.begin());
+
+	cerr << "Found " << counter.size() << " triangles." << endl;
+	cerr << "Out of these, the top " << int(topk.size()) - 1 << " are found for sure." << endl;
+	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+
+	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	cerr << "Total Time (s): " << tot_time << endl;
+	cerr << endl;
+
+	return counter;
+
+}
+
 void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles, int K) {
 	cerr << "=============================================" << endl;
 	cerr << "Comparing sampling statistics" << endl;
