@@ -10,6 +10,9 @@ clique_sampler: clique_sampler.o
 
 adaptive_enumerator: adaptive_enumerator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+maximal_indep_set: maximal_indep_set.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 all: $(exe)
 .PHONY: clean

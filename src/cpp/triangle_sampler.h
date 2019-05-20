@@ -446,7 +446,7 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 // constant is computed on the fly automatically
 set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 	cerr << "=============================================" << endl;
-	cerr << "Running auto thresholded heavy light for triangles" << endl;
+	cerr << "Running autothresh. heavy light for triangles" << endl;
 	cerr << "=============================================" << endl;
 	double st = clock();
 
