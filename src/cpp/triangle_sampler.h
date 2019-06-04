@@ -334,7 +334,8 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 
 	Graph Gh;
 	int hi = 0, hj = 0;
-	double threshold = numeric_limits<double>::max();
+	// double threshold = numeric_limits<double>::max();
+	int threshold = numeric_limits<int>::max();
 	counter.insert(weighted_triangle(0, 0, 0, threshold));
 	auto curr = counter.begin();
 	while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
@@ -470,7 +471,8 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 
 	Graph Gh;
 	int hi = 0, hj = 0;
-	double threshold = numeric_limits<double>::max();
+	// double threshold = numeric_limits<double>::max();
+	int threshold = numeric_limits<int>::max();
 	counter.insert(weighted_triangle(0, 0, 0, threshold));
 	auto curr = counter.begin();
 	while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
