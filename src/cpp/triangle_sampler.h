@@ -25,7 +25,7 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 
 	// TODO: Can replace maps with normal arrays in most of these procedures.
 	// Will only be useful in single threaded case.
-	vector<int> vert_to_wt(G.size());
+	vector<long long> vert_to_wt(G.size());
 	for (int u = 0; u < (int) G.size(); u++) {
 		for (auto e : G[u]) {
 			if (e.dst < u) continue;
@@ -71,15 +71,17 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	map<int, vector<full_edge>> edge_distribution;
 	for (int u = 0; u < (int) G.size(); u++) {
 		for (auto e : G[u]) {
-			int v = e.dst, w = e.wt;
+			int v = e.dst;
+			long long w = e.wt;
 			if (u > v) continue;
 			edge_distribution[e.wt].push_back({u, v, w});
 		}
 	}
 
-	vector<int> cumulative_weights;
-	map<int, int> index_to_weight;
-	int count = 0, prev = 0;
+	vector<long long> cumulative_weights;
+	map<int, long long> index_to_weight;
+	int count = 0;
+	long long prev = 0;
 	// todo: replace this with p means
 	for (const auto& kv : edge_distribution) {
 		//cerr << kv.first << " " << kv.second.size() << endl;
@@ -92,12 +94,12 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	cerr << "Total edge weight: " << cumulative_weights.back() << endl;
 
 	auto sample_edge = [&](){
-		int s = rand() % cumulative_weights.back();
+		long long s = rand() % cumulative_weights.back();
 		int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
 		//cerr << "sampled weight: " << s << endl;
 		//cerr << "sampled index: " << idx << " " << index_to_weight[idx] << endl;
 
-		int weight = index_to_weight[idx];
+		long long weight = index_to_weight[idx];
 		auto& edges = edge_distribution[weight];
 		return edges[rand() % edges.size()];
 	};
@@ -106,14 +108,15 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	set<pair<int, int>> history;
 	for (int samp = 0; samp < nsamples; samp++) {
 		auto e = sample_edge();
-		int u = e.src, v = e.dst, w = e.wt;
+		int u = e.src, v = e.dst;
+		long long w = e.wt;
 		// resampling isnt an issue from experimentation
 		if (history.count(make_pair(u, v))) {
 			//cerr << "RESAMPLED!!" << endl;
 			continue;
 		}
 		history.insert(make_pair(u, v));
-		map<int, int> vert_to_wt;
+		map<int, long long> vert_to_wt;
 		for (auto eu : G[u]) {
 			vert_to_wt[eu.dst] = eu.wt;
 		}
@@ -146,11 +149,11 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	double st = clock();
 	vector<full_edge> edges;
 	map<int, double> weight_sum;
-	vector<vector<int>> node_sums(G.size());
+	vector<vector<long long>> node_sums(G.size());
 	for (int u = 0; u < (int) G.size(); u++) {
 		sort(G[u].begin(), G[u].end());
 
-		int prev = 0;
+		long long prev = 0;
 		for (auto e : G[u]) {
 			weight_sum[u] += e.wt;
 			if (u < e.dst) {
@@ -198,7 +201,8 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	set<weighted_triangle> counter;
 	for (int samps = 0; samps < nsamples; samps++) {
 		auto edge = sample_edge();
-		int u = edge.src, v = edge.dst, w = edge.wt;
+		int u = edge.src, v = edge.dst;
+		long long w = edge.wt;
 
 		auto c0 = sample_neighbour(u, v);
 		auto c1 = sample_neighbour(v, u);
@@ -207,7 +211,7 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 		}
 
 		/*
-		map<int, int> seen;
+		map<int, long long> seen;
 		for (int s = 0; s < G[v].size(); s++) {
 			auto c0 = sample_neighbour(u, v);
 			seen[c0.dst] = c0.wt;
@@ -269,9 +273,10 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 
 ///*
 	for (int i = (int) (p * edges.size()); i < (int) edges.size(); i++) {
-		int u = edges[i].src, v = edges[i].dst, w = edges[i].wt;
+		int u = edges[i].src, v = edges[i].dst;
+		long long w = edges[i].wt;
 		if (u >= (int) Gh.size() || v >= (int) Gh.size()) continue;
-		map<int, int> seen;
+		map<int, long long> seen;
 		for (auto e : Gh[u]) {
 			seen[e.dst] = e.wt;
 		}
@@ -286,9 +291,10 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 
 /*
 	for (int i = 0; i < (int) (p * edges.size()); i++) {
-		int u = edges[i].src, v = edges[i].dst, w = edges[i].wt;
+		int u = edges[i].src, v = edges[i].dst;
+		long long w = edges[i].wt;
 		if (u >= (int) Gl.size() || v >= (int) Gl.size()) continue;
-		map<int, int> seen;
+		map<int, long long> seen;
 		for (auto e : Gl[u]) {
 			seen[e.dst] = e.wt;
 		}
@@ -318,7 +324,7 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 	double st = clock();
 
 	vector<full_edge> edges;
-	vector<map<int, int>> exists(G.size());
+	vector<map<int, long long>> exists(G.size());
 	for (int i = 0; i < (int) G.size(); i++) {
 		for (auto e : G[i]) {
 			if (i < e.dst) {
@@ -335,7 +341,7 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 	Graph Gh;
 	int hi = 0, hj = 0;
 	// double threshold = numeric_limits<double>::max();
-	int threshold = numeric_limits<int>::max();
+	long long threshold = numeric_limits<long long>::max();
 	counter.insert(weighted_triangle(0, 0, 0, threshold));
 	auto curr = counter.begin();
 	while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
@@ -357,7 +363,7 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 			// Check for P2s with incoming ej
 			for (auto e : Gh[ej.src]) {
 				if (exists[e.dst].count(ej.dst)) {
-					int weight = ej.wt + e.wt + exists[ej.dst][e.dst];
+					long long weight = ej.wt + e.wt + exists[ej.dst][e.dst];
 					weighted_triangle T(e.dst, ej.dst, ej.src, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -367,7 +373,7 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 			}
 			for (auto e : Gh[ej.dst]) {
 				if (exists[e.dst].count(ej.src)) {
-					int weight = ej.wt + e.wt + exists[ej.src][e.dst];
+					long long weight = ej.wt + e.wt + exists[ej.src][e.dst];
 					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -377,13 +383,13 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 			}
 
 			// Check for all 3 heavy
-			map<int, int> vert_to_wt;
+			map<int, long long> vert_to_wt;
 			for (auto e : Gh[ej.src]) {
 				vert_to_wt[e.dst] = e.wt;
 			}
 			for (auto e : Gh[ej.dst]) {
 				if (vert_to_wt.count(e.dst)) {
-					int weight = ej.wt + e.wt + vert_to_wt[e.dst];
+					long long weight = ej.wt + e.wt + vert_to_wt[e.dst];
 					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -401,13 +407,13 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 			Gh[ej.dst].push_back({ej.src, ej.wt});
 		} else {
 			// Advance i, H1 case (exactly 1 heavy)
-			map<int, int> vert_to_wt;
+			map<int, long long> vert_to_wt;
 			for (auto kv : exists[ei.src]) {
 				vert_to_wt[kv.first] = kv.second;
 			}
 			for (auto kv : exists[ei.dst]) {
 				if (vert_to_wt.count(kv.first)) {
-					int weight = ei.wt + kv.second + vert_to_wt[kv.first];
+					long long weight = ei.wt + kv.second + vert_to_wt[kv.first];
 					weighted_triangle T(kv.first, ei.src, ei.dst, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -452,8 +458,8 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 	double st = clock();
 
 	vector<full_edge> edges;
-	vector<map<int, int>> exists(G.size());
-	map<int, int> edge_distribution;
+	vector<map<int, long long>> exists(G.size());
+	map<long long, int> edge_distribution;
 	edge_distribution[0] = 1; // Assuming positive weight edges
 	for (int i = 0; i < (int) G.size(); i++) {
 		for (auto e : G[i]) {
@@ -472,7 +478,7 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 	Graph Gh;
 	int hi = 0, hj = 0;
 	// double threshold = numeric_limits<double>::max();
-	int threshold = numeric_limits<int>::max();
+	long long threshold = numeric_limits<long long>::max();
 	counter.insert(weighted_triangle(0, 0, 0, threshold));
 	auto curr = counter.begin();
 	while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
@@ -490,7 +496,7 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 			// Check for P2s with incoming ej
 			for (auto e : Gh[ej.src]) {
 				if (exists[e.dst].count(ej.dst)) {
-					int weight = ej.wt + e.wt + exists[ej.dst][e.dst];
+					long long weight = ej.wt + e.wt + exists[ej.dst][e.dst];
 					weighted_triangle T(e.dst, ej.dst, ej.src, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -500,7 +506,7 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 			}
 			for (auto e : Gh[ej.dst]) {
 				if (exists[e.dst].count(ej.src)) {
-					int weight = ej.wt + e.wt + exists[ej.src][e.dst];
+					long long weight = ej.wt + e.wt + exists[ej.src][e.dst];
 					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -510,13 +516,13 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 			}
 
 			// Check for all 3 heavy
-			map<int, int> vert_to_wt;
+			map<int, long long> vert_to_wt;
 			for (auto e : Gh[ej.src]) {
 				vert_to_wt[e.dst] = e.wt;
 			}
 			for (auto e : Gh[ej.dst]) {
 				if (vert_to_wt.count(e.dst)) {
-					int weight = ej.wt + e.wt + vert_to_wt[e.dst];
+					long long weight = ej.wt + e.wt + vert_to_wt[e.dst];
 					weighted_triangle T(e.dst, ej.src, ej.dst, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -534,13 +540,13 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 			Gh[ej.dst].push_back({ej.src, ej.wt});
 		} else {
 			// Advance i, H1 case (exactly 1 heavy)
-			map<int, int> vert_to_wt;
+			map<int, long long> vert_to_wt;
 			for (auto kv : exists[ei.src]) {
 				vert_to_wt[kv.first] = kv.second;
 			}
 			for (auto kv : exists[ei.dst]) {
 				if (vert_to_wt.count(kv.first)) {
-					int weight = ei.wt + kv.second + vert_to_wt[kv.first];
+					long long weight = ei.wt + kv.second + vert_to_wt[kv.first];
 					weighted_triangle T(kv.first, ei.src, ei.dst, weight);
 					if (weight >= threshold) {
 						topk.insert(T);
@@ -589,7 +595,7 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	//vector<double> breakpoints({0.1, 0.25, 0.5});
 
 	int k = min(K, (int)sampled_triangles.size());
-	vector<int> ranks(k), top_sampled_weights(k), top_true_weights(k);
+	vector<long long> ranks(k), top_sampled_weights(k), top_true_weights(k);
 	vector<long double> percentiles(k);
 
 	for (auto T : all_triangles) {

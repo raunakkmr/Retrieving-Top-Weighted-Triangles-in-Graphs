@@ -8,7 +8,8 @@ namespace wsdm_2019_graph {
 
 // generic data structures for graphs
 struct full_edge {
-  int src, dst, wt;
+  int src, dst;
+  long long wt;
   bool operator<(const full_edge& o) const {
     if (o.wt != wt) return wt < o.wt;
     return make_pair(src, dst) < make_pair(o.src, o.dst);
@@ -16,7 +17,8 @@ struct full_edge {
 };
 
 struct half_edge {
-  int dst, wt;
+  int dst;
+  long long wt;
   // THIS CANNOT BE CHANGED SINCE IT IS USED BY PATH SAMPLER
   const bool operator<(const half_edge& o) const {
     if (dst == o.dst) return wt > o.wt;
@@ -26,8 +28,8 @@ struct half_edge {
 
 struct weighted_triangle {
   tuple<int, int, int> vertices;
-  int weight;
-  weighted_triangle(int u, int v, int w, int wt) {
+  long long weight;
+  weighted_triangle(int u, int v, int w, long long wt) {
     int verts[] = {u, v, w};
     sort(verts, verts+3);
     vertices = make_tuple(verts[0], verts[1], verts[2]);
@@ -47,8 +49,8 @@ struct weighted_triangle {
 
 struct weighted_clique {
   vector<int> vertices;
-  int weight;
-  weighted_clique(vector<int> V, int wt) {
+  long long weight;
+  weighted_clique(vector<int> V, long long wt) {
     sort(V.begin(), V.end());
     vertices = V;
     weight = wt;
@@ -155,7 +157,7 @@ Graph read_graph(string filename) {
   cerr << "reading in graph " << filename << endl;
 
   // no use for the times right now
-  map<int, map<int, int>> weight;
+  map<int, map<int, long long>> weight;
   map<int, int> label;
   int ns, nnodes = 0;
   while (nverts >> ns) {
@@ -179,15 +181,60 @@ Graph read_graph(string filename) {
   Graph G(nnodes);
   for (auto& e0 : weight) {
     for (auto& e1 : e0.second) {
-      int u = label[e0.first], v = label[e1.first], w = e1.second;
+      int u = label[e0.first], v = label[e1.first];
+      long long w = e1.second;
       G[u].push_back({v, w});
       nedges++;
     }
   }
 
-  cerr << "read in a graph with " << nnodes << " " << nedges / 2 << " edges" << endl;
+  cerr << "read in a graph with " << nnodes << " nodes and " << nedges / 2 << " edges" << endl;
   cerr << "Average degree: " << nedges / nnodes << endl;
   return G;
+}
+
+// Modify the weights of the graph for p-means.
+// If p=0, then w -> log(w). Otherwise, w -> w^p.
+// However, a lot of the existing code assumes integer edge weights and this may
+// no longer be true for certain values of p, such as 0, -1, 1.5, etc. So we
+// scale the weights by multiplying it with a large constant and rounding them
+// to an integer. The distribution of the weights does not change. If the
+// maximum edge weight was too large, then prints a warning.
+void modify_weights(Graph &G, double p=1.0) {
+  long long max_weight_edge = -1;
+  long long num_edges = 0;
+  for (int u = 0; u < (int) G.size(); u++) {
+    for (auto &e : G[u]) {
+      max_weight_edge = max(max_weight_edge, e.wt);
+      num_edges++;
+    }
+  }
+  num_edges /= 2;
+
+  int factor = 1000000;
+
+  if (max_weight_edge > numeric_limits<long long>::max() / factor) {
+    cerr << "WARNING: max_weight_edge is too large to truncate!!!" << endl;
+  }
+
+  long long large_constant = numeric_limits<long long>::max() / (num_edges*factor*max_weight_edge);
+
+  cerr << max_weight_edge << " " << numeric_limits<long long>::max() << " " << (num_edges*factor*max_weight_edge) << endl;
+  cerr << large_constant << endl;
+
+  if (abs(p) < 1e-8) {
+    for (int u = 0; u < (int) G.size(); u++) {
+      for (auto &e : G[u]) {
+        e.wt = (long long) (log(e.wt) * large_constant);
+      }
+    }
+  } else {
+    for (int u = 0; u < (int) G.size(); u++) {
+      for (auto &e : G[u]) {
+        e.wt = (long long) (pow(e.wt, p) * large_constant);
+      }
+    }
+  }
 }
 
 }

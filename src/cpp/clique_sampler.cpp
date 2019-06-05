@@ -9,7 +9,7 @@ using namespace std;
 using namespace wsdm_2019_graph;
 
 #define PRINT_ARGS 1
-#define PRINT_STATISTICS 1
+#define PRINT_STATISTICS 0
 
 int main(int argc, char* argv[]) {
   ios::sync_with_stdio(0);
@@ -17,12 +17,18 @@ int main(int argc, char* argv[]) {
   srand(0); 
 
   auto G = read_graph(argv[1]);
-  int CLIQUE_SIZE = atoi(argv[2]);
-  int NUM_SAMPLES_EDGE = atoi(argv[3]);
-  int NUM_SAMPLES_PATH = atoi(argv[4]);
-  int NUM_SAMPLES_CLIQUE = atoi(argv[5]);
-  int CHECK_TRIANGLES = atoi(argv[6]);
-  int K = atoi(argv[7]);
+  int NUM_SAMPLES_EDGE = atoi(argv[2]);
+  int NUM_SAMPLES_PATH = atoi(argv[3]);
+  int CHECK_TRIANGLES = atoi(argv[4]);
+  int K = atoi(argv[5]);
+  double P = atof(argv[6]);
+  // Since we are focusing on triangles for now, I am setting these to 0
+  // manually to make it easier to specify arguments on the command line. We
+  // should make the command line interface nicer at some point.
+  // int CLIQUE_SIZE = atoi(argv[7]);
+  // int NUM_SAMPLES_CLIQUE = atoi(argv[8]);
+  int CLIQUE_SIZE = 0;
+  int NUM_SAMPLES_CLIQUE = 0;
 
 #if PRINT_ARGS
   cerr << "=============================================" << endl;
@@ -30,7 +36,9 @@ int main(int argc, char* argv[]) {
   cerr << "=============================================" << endl;
   cerr << "Dataset: " << argv[1] << endl;
   cerr << "NUM_SAMPLES_EDGE: " << NUM_SAMPLES_EDGE << endl;
+  cerr << "NUM_SAMPLES_PATH: " << NUM_SAMPLES_PATH << endl;
   cerr << "K: " << K << endl;
+  cerr << "P: " << P << endl;
   cerr << endl;
 #endif
 
@@ -55,10 +63,13 @@ int main(int argc, char* argv[]) {
   cerr << endl;
 #endif
 
+  modify_weights(G, P);
+
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
   auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
+  auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(G, K);
   
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
@@ -74,6 +85,8 @@ int main(int argc, char* argv[]) {
     compare_statistics(all_tris, heavy_light_sampling_tri, K);
     cerr << "*** Comparing adaptive heavy light ***" << endl;
     compare_statistics(all_tris, adaptive_heavy_light_tri, K);
+    cerr << "*** Comparing auto thresholded heavy light ***" << endl;
+    compare_statistics(all_tris, auto_thresholded_heavy_light_tri, K);
 
     // Write out triangles to a file
     bool write_out_stats = false;

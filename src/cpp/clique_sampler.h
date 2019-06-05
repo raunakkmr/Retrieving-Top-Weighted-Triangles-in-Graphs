@@ -20,7 +20,8 @@ set<weighted_clique> enumerate_cliques(Graph& G, int k) {
 	} else if (k == 2) {
 		for (int u = 0; u < (int) G.size(); u++) {
 			for (auto e : G[u]) {
-				int v = e.dst, w = e.wt;
+				int v = e.dst;
+				long long w = e.wt;
 				retval.insert(weighted_clique(vector<int>({u, v}), w));
 			}
 		}
@@ -54,7 +55,7 @@ set<weighted_clique> enumerate_cliques(Graph& G, int k) {
 		}
 	}
 
-	map<int, map<int, int>> adjmat;
+	map<int, map<int, long long>> adjmat;
 	for (int i = 0; i < (int) G.size(); i++) {
 		if (removed[i]) continue;
 		for (auto e : G[i]) {
@@ -96,7 +97,7 @@ set<weighted_clique> enumerate_cliques(Graph& G, int k) {
 				}
 
 				if (adjmat[u].count(v)) {
-					int w = adjmat[u][v];
+					long long w = adjmat[u][v];
 					subgraph[label[u]].push_back({label[v], w});
 					subgraph[label[v]].push_back({label[u], w});
 					nedges++;
@@ -171,11 +172,12 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
-	map<int, map<int, int>> adjmat;
+	map<int, map<int, long long>> adjmat;
 	for (int u = 0; u < (int) G.size(); u++) {
 		if (removed[u]) continue;
 		for (auto e : G[u]) {
-			int v = e.dst, w = e.wt;
+			int v = e.dst;
+			long long w = e.wt;
 			if (u > v) continue;
 			if (removed[v]) continue;
 			edge_distribution[e.wt].push_back({u, v, w});
@@ -183,9 +185,10 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 		}
 	}
 
-	vector<int> cumulative_weights;
-	map<int, int> index_to_weight;
-	int count = 0, prev = 0;
+	vector<long long> cumulative_weights;
+	map<int, long long> index_to_weight;
+	int count = 0;
+	long long prev = 0;
 	// todo: replace this with p means
 	for (const auto& kv : edge_distribution) {
 		//cerr << kv.first << " " << kv.second.size() << endl;
@@ -198,12 +201,12 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 	cerr << "Total edge weight: " << cumulative_weights.back() << endl;
 
 	auto sample_edge = [&](){
-		int s = rand() % cumulative_weights.back();
+		long long s = rand() % cumulative_weights.back();
 		int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
 		//cerr << "sampled weight: " << s << endl;
 		//cerr << "sampled index: " << idx << " " << index_to_weight[idx] << endl;
 
-		int weight = index_to_weight[idx];
+		long long weight = index_to_weight[idx];
 		auto& edges = edge_distribution[weight];
 		return edges[rand() % edges.size()];
 	};
@@ -212,13 +215,14 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 	set<pair<int, int>> history;
 	for (int samp = 0; samp < nsamples; samp++) {
 		auto sample = sample_edge();
-		int u = sample.src, v = sample.dst, w = sample.wt;
+		int u = sample.src, v = sample.dst;
+		long long w = sample.wt;
 		if (history.count(make_pair(u, v))) {
 			//cerr << "RESAMPLED!!" << endl;
 			continue;
 		}
 		history.insert(make_pair(u, v));
-		map<int, int> vert_to_wt_u, vert_to_wt_v;
+		map<int, long long> vert_to_wt_u, vert_to_wt_v;
 		for (auto e : G[u]) {
 			if (removed[e.dst]) continue;
 			vert_to_wt_u[e.dst] = e.wt;
@@ -290,7 +294,8 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 		// Then we can delete all of the edges here.
 		for (auto clique : cliques) {
 			// unlabelling phase
-			map<int, int> seen, wsum;
+			map<int, int> seen;
+			long long wsum;
 			vector<int> nbrs;
 			for (int& vert : clique.vertices) {
 				vert = unlabel[vert];
