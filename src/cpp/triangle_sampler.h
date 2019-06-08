@@ -33,13 +33,15 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 		}
 
 		for (auto e : G[u]) {
-			int v = e.dst, w = e.wt;
+			int v = e.dst;
+			long long w = e.wt;
 			if (v < u) continue;
 
 			for (auto ev : G[v]) {
 				if (ev.dst < v) continue;
 				if (vert_to_wt[ev.dst]) {
 					// todo: replace with p means
+					long long val = ev.wt + vert_to_wt[ev.dst] + w;
 					counter.insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
 				}
 			}

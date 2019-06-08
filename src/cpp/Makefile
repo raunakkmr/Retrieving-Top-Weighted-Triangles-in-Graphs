@@ -10,6 +10,9 @@ clique_sampler: clique_sampler.o
 
 adaptive_enumerator: adaptive_enumerator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+brute_force_enumerator: brute_force_enumerator.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 all: $(exe)
 .PHONY: clean
