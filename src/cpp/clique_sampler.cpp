@@ -67,8 +67,8 @@ int main(int argc, char* argv[]) {
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
-  auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
-  auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
+  // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
+  // auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
   auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(G, K);
   
   if (CHECK_TRIANGLES) {
@@ -81,10 +81,10 @@ int main(int argc, char* argv[]) {
       cerr << "*** Comparing path sampling ***" << endl;
       compare_statistics(all_tris, path_sampling_tri, K);
     }
-    cerr << "*** Comparing heavy light sampling ***" << endl;
-    compare_statistics(all_tris, heavy_light_sampling_tri, K);
-    cerr << "*** Comparing adaptive heavy light ***" << endl;
-    compare_statistics(all_tris, adaptive_heavy_light_tri, K);
+    // cerr << "*** Comparing heavy light sampling ***" << endl;
+    // compare_statistics(all_tris, heavy_light_sampling_tri, K);
+    // cerr << "*** Comparing adaptive heavy light ***" << endl;
+    // compare_statistics(all_tris, adaptive_heavy_light_tri, K);
     cerr << "*** Comparing auto thresholded heavy light ***" << endl;
     compare_statistics(all_tris, auto_thresholded_heavy_light_tri, K);
 

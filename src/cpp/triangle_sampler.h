@@ -600,11 +600,19 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	vector<long long> ranks(k), top_sampled_weights(k), top_true_weights(k);
 	vector<long double> percentiles(k);
 
+	set<long long> unique_weights;
+	for (const auto &T : all_triangles) {
+		unique_weights.insert(T.weight);
+	}
+	vector<long long> weights(unique_weights.begin(), unique_weights.end());
+	sort(weights.rbegin(), weights.rend());
+
 	for (auto T : all_triangles) {
 		if (sampled_triangles.count(T)) {
 			num_found++;
 			if (num_found < k+1) {
-				ranks[num_found-1] = curr_tri+1;
+				// ranks[num_found-1] = curr_tri+1;
+				ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
 				percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_triangles.size();
 				top_sampled_weights[num_found-1] = T.weight;
 			}

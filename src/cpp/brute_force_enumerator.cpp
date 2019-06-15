@@ -23,7 +23,6 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    return -1;
 
     auto all_tris = brute_force_sampler(G);
 
@@ -38,7 +37,7 @@ int main(int argc, char* argv[]) {
     triangle_file.close();
 
     ofstream tris_to_weight_file(dataset+"-ntris-to-weight.txt");
-    for (int i = 0; i < (int) G[i].size(); i++) {
+    for (int i = 0; i < (int) G.size(); i++) {
       double weight_sum = 0;
       for (auto e : G[i]) {
         weight_sum += e.wt;
@@ -48,7 +47,7 @@ int main(int argc, char* argv[]) {
     tris_to_weight_file.close();
 
     ofstream degree_file(dataset+"-degree-to-weight.txt");
-    for (int i = 0; i < (int) G[i].size(); i++) {
+    for (int i = 0; i < (int) G.size(); i++) {
       double weight_sum = 0;
       for (auto e : G[i]) {
         weight_sum += e.wt;
