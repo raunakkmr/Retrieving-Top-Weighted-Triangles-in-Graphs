@@ -42,7 +42,7 @@ set<weighted_triangle> brute_force_sampler(Graph& G, bool diagnostic = true) {
 				if (vert_to_wt[ev.dst]) {
 					// todo: replace with p means
 					long long val = ev.wt + vert_to_wt[ev.dst] + w;
-					counter.insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
+					counter.insert(weighted_triangle(u, v, ev.dst, val));
 				}
 			}
 		}
@@ -141,6 +141,100 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	return counter;
 }
 
+set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthreads) {
+	cerr << "=============================================" << endl;
+	cerr << "Running parallel edge sampling for triangles" << endl;
+	cerr << "=============================================" << endl;
+	double st = clock();
+
+	// build distribution over edges
+	map<int, vector<full_edge>> edge_distribution;
+	for (int u = 0; u < (int) G.size(); u++) {
+		for (const auto &e : G[u]) {
+			int v = e.dst;
+			long long w = e.wt;
+			if (u > v) continue;
+			edge_distribution[e.wt].push_back({u, v, w});
+		}
+	}
+
+	vector<long long> cumulative_weights;
+	map<int, long long> index_to_weight;
+	int count = 0;
+	long long prev = 0;
+	for (const auto &kv : edge_distribution) {
+		cumulative_weights.push_back(kv.second.size() * kv.first);
+		cumulative_weights[cumulative_weights.size() - 1] += prev;
+		index_to_weight[count++] = kv.first;
+		prev = cumulative_weights.back();
+	}
+	cerr << "Edge weight classes: " << edge_distribution.size() << endl;
+	cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+
+	vector<thread> threads(nthreads);
+	vector<set<weighted_triangle>> counters(nthreads);
+	vector<set<pair<int, int>>> histories(nthreads);
+	int nsamples_per_thread = ceil(nsamples / nthreads);
+
+	auto sample_edge = [&](){
+		long long s = rand() % cumulative_weights.back();
+		int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
+
+		long long weight = index_to_weight[idx];
+		auto &edges = edge_distribution[weight];
+		return edges[rand() % edges.size()];
+	};
+
+	auto parallel_sampler = [&](int i){
+		set<weighted_triangle> counter;
+		set<pair<int, int>> history;
+		for (int samp = 0; samp < nsamples_per_thread; samp++) {
+			auto e = sample_edge();
+			int u = e.src, v = e.dst;
+			long long w = e.wt;
+
+			if (histories[i].count(make_pair(u, v))) {
+				continue;
+			}
+			histories[i].insert(make_pair(u, v));
+			map<int, long long> vert_to_wt;
+			for (auto eu : G[u]) {
+				vert_to_wt[eu.dst] = eu.wt;
+			}
+
+			for (auto ev : G[v]) {
+				if (vert_to_wt.count(ev.dst)) {
+					counters[i].insert(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
+				}
+			}
+		}
+	};
+
+	for (int i = 0; i < nthreads; i++) {
+		thread th(parallel_sampler, i);
+		threads[i] = move(th);
+	}
+	for (int i = 0; i < nthreads; i++) {
+		threads[i].join();
+	}
+
+	set<weighted_triangle> counter;
+	for (const auto &c : counters) {
+		for (const auto &t : c) {
+			counter.insert(t);
+		}
+	}
+
+	cerr << "Found " << counter.size() << " triangles." << endl;
+	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+
+	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	cerr << "Total Time (s): " << tot_time << endl;
+	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+	cerr << endl;
+
+	return counter;
+}
 
 // 4x speedup possible with an optimal random number implementation
 // this isnt enough to get asymptotically past

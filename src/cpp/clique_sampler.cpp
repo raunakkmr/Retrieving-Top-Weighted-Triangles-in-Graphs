@@ -65,7 +65,10 @@ int main(int argc, char* argv[]) {
 
   modify_weights(G, P);
 
+  int nthreads = thread::hardware_concurrency();
+
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
+  auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
   auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
   // auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
@@ -76,6 +79,8 @@ int main(int argc, char* argv[]) {
     if (NUM_SAMPLES_EDGE > 0) {
       cerr << "*** Comparing edge sampling ***" << endl;
       compare_statistics(all_tris, edge_sampling_tri, K);
+      cerr << "*** Comparing parallel edge sampling ***" << endl;
+      compare_statistics(all_tris, edge_sampling_tri_parallel, K);
     }
     if (NUM_SAMPLES_PATH > 0) {
       cerr << "*** Comparing path sampling ***" << endl;
