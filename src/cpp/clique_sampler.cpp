@@ -66,6 +66,7 @@ int main(int argc, char* argv[]) {
   modify_weights(G, P);
 
   int nthreads = thread::hardware_concurrency();
+  // nthreads = 4;
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);

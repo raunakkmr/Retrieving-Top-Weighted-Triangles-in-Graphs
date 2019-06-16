@@ -67,7 +67,9 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	cerr << "=============================================" << endl;
 	cerr << "Running edge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+	// double st = clock();
+	time_t st;
+	time(&st);
 
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
@@ -133,7 +135,10 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	cerr << "Found " << counter.size() << " triangles." << endl;
 	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
-	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	// double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	time_t en;
+	time(&en);
+	double tot_time = difftime(en, st);
 	cerr << "Total Time (s): " << tot_time << endl;
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
 	cerr << endl;
@@ -145,7 +150,9 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 	cerr << "=============================================" << endl;
 	cerr << "Running parallel edge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+	// double st = clock();
+	time_t st;
+	time(&st);
 
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
@@ -186,8 +193,6 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 	};
 
 	auto parallel_sampler = [&](int i){
-		set<weighted_triangle> counter;
-		set<pair<int, int>> history;
 		for (int samp = 0; samp < nsamples_per_thread; samp++) {
 			auto e = sample_edge();
 			int u = e.src, v = e.dst;
@@ -228,7 +233,10 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 	cerr << "Found " << counter.size() << " triangles." << endl;
 	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
-	double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	// double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+	time_t en;
+	time(&en);
+	double tot_time = difftime(en, st);
 	cerr << "Total Time (s): " << tot_time << endl;
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
 	cerr << endl;
