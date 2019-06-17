@@ -18,10 +18,11 @@ int main(int argc, char* argv[]) {
 
   auto G = read_graph(argv[1]);
   int NUM_SAMPLES_EDGE = atoi(argv[2]);
-  int NUM_SAMPLES_PATH = atoi(argv[3]);
-  int CHECK_TRIANGLES = atoi(argv[4]);
-  int K = atoi(argv[5]);
-  double P = atof(argv[6]);
+  int NUM_SAMPLES_WEDGE = atoi(argv[3]);
+  int NUM_SAMPLES_PATH = atoi(argv[4]);
+  int CHECK_TRIANGLES = atoi(argv[5]);
+  int K = atoi(argv[6]);
+  double P = atof(argv[7]);
   // Since we are focusing on triangles for now, I am setting these to 0
   // manually to make it easier to specify arguments on the command line. We
   // should make the command line interface nicer at some point.
@@ -70,6 +71,7 @@ int main(int argc, char* argv[]) {
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
+  auto wedge_sampling_tri = wedge_sampler(G, NUM_SAMPLES_WEDGE);
   auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
   // auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
@@ -82,6 +84,10 @@ int main(int argc, char* argv[]) {
       compare_statistics(all_tris, edge_sampling_tri, K);
       cerr << "*** Comparing parallel edge sampling ***" << endl;
       compare_statistics(all_tris, edge_sampling_tri_parallel, K);
+    }
+    if (NUM_SAMPLES_WEDGE > 0) {
+      cerr << "*** Comparing wedge sampling ***" << endl;
+      compare_statistics(all_tris, wedge_sampling_tri, K);
     }
     if (NUM_SAMPLES_PATH > 0) {
       cerr << "*** Comparing path sampling ***" << endl;

@@ -6,6 +6,10 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
+long long rand64() {
+  return rand() * (1LL << 32) + rand();
+}
+
 // generic data structures for graphs
 struct full_edge {
   int src, dst;
