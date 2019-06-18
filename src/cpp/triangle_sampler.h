@@ -265,20 +265,26 @@ set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {
 	
 	// build sampling distribution over vertices
 	vector<long long> cumulative_weights;
-	vector<vector<long long>> vertex_cumulative_weights(G.size());
+	vector<vector<long long>> vertex_cumulative_weights_1(G.size());
+	vector<vector<long long>> vertex_cumulative_weights_2(G.size());
 	long long prev = 0;
 	// todo: replace this with p means
 	for (int i = 0; i < (int) G.size(); i++) {
+		long long vertex_weight = 0;
+		for (auto e : G[i]) {
+			vertex_weight += e.wt;
+			vertex_cumulative_weights_2[i].push_back(vertex_weight);
+		}
+
 		long long total_weight = 0;
 		for (auto e : G[i]) {
-			total_weight += e.wt;
-			vertex_cumulative_weights[i].push_back(total_weight);
+			total_weight += G[i].size() * e.wt + vertex_weight;
+			vertex_cumulative_weights_1[i].push_back(total_weight);
 		}
 		cumulative_weights.push_back(total_weight);
 		cumulative_weights[cumulative_weights.size() - 1] += prev;
 		prev = cumulative_weights.back();
 	}
-	cerr << "Total vertex weight: " << cumulative_weights.back() << endl;
 
 	// build an adjacency matrix where a(i, j) = weight of edge (i, j)
 	// TODO: maybe we should lift this out of the functions and make a more general graph structure
@@ -291,19 +297,25 @@ set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {
 		}
 	}
 
-	auto sample_vertex = [&](){
+	auto sample_vertex = [&]() {
 		long long s = rand64() % cumulative_weights.back();
 		int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
 		return idx;
 	};
 
-	auto sample_neighbour = [&](int v, long long shift){
-		long long s = rand64() % (vertex_cumulative_weights[v].back() + shift * G[v].size());
-		if (s >= vertex_cumulative_weights[v].back()) {
+	auto sample_neighbour_1 = [&](int v) {
+		long long s = rand64() % vertex_cumulative_weights_1[v].back();
+		int idx = lower_bound(vertex_cumulative_weights_1[v].begin(), vertex_cumulative_weights_1[v].end(), s) - vertex_cumulative_weights_1[v].begin();
+		return G[v][idx];
+	};
+
+	auto sample_neighbour_2 = [&](int v, long long shift) {
+		long long s = rand64() % (vertex_cumulative_weights_2[v].back() + shift * G[v].size());
+		if (s >= vertex_cumulative_weights_2[v].back()) {
 			return G[v][rand() % G[v].size()];
 		} else {
-			s = rand64() % vertex_cumulative_weights[v].back();
-			int idx = lower_bound(vertex_cumulative_weights[v].begin(), vertex_cumulative_weights[v].end(), s) - vertex_cumulative_weights[v].begin();
+			s = rand64() % vertex_cumulative_weights_2[v].back();
+			int idx = lower_bound(vertex_cumulative_weights_2[v].begin(), vertex_cumulative_weights_2[v].end(), s) - vertex_cumulative_weights_2[v].begin();
 			return G[v][idx];
 		}
 	};
@@ -311,8 +323,8 @@ set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {
 	set<weighted_triangle> counter;
 	for (int samp = 0; samp < nsamples; samp++) {
 		int u = sample_vertex();
-		auto ev = sample_neighbour(u, 0);
-		auto ew = sample_neighbour(u, ev.wt);
+		auto ev = sample_neighbour_1(u);
+		auto ew = sample_neighbour_2(u, ev.wt);
 		if (ev.dst == ew.dst) continue;
 
 		if (weight[ev.dst].count(ew.dst)) {
