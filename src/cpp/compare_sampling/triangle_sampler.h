@@ -368,9 +368,9 @@ void compare_statistics_old(set<weighted_triangle> &all_triangles,
 		}
 		int num_found = 0;
 		int k = min(K, (int)sampled_triangles.size());
-		long double accuracy = 0.0;
+		long double recall = 0.0;
 		if (k == 0) {
-			accuracy = -1;
+			recall = -1;
 		} else {
 			ranks.clear(); ranks.resize(k);
 			for (const auto &T : sampled_triangles) {
@@ -381,12 +381,12 @@ void compare_statistics_old(set<weighted_triangle> &all_triangles,
 				}
 			}
 			for (int i = 0; i < k; i++) {
-				accuracy += (ranks[i] <= K);
+				recall += (ranks[i] <= K);
 			}
-			accuracy /= K;
+			recall /= K;
 		}
 
-		cerr << "Time: " << times[i] << ", accuracy: " << accuracy << endl;
+		cerr << "Time: " << times[i] << ", recall: " << recall << endl;
 
 	}
 
@@ -444,13 +444,13 @@ void compare_statistics(set<weighted_triangle> &all_triangles,
 			}
 		}
 
-		long double accuracy = 0.0;
+		long double recall = 0.0;
 		for (int i = 0; i < k; i++) {
-			accuracy += (ranks[i] <= k);
+			recall += (ranks[i] <= k);
 		}
 
-		accuracy /= K;
-		cerr << "Accuracy: " << accuracy << endl;
+		recall /= K;
+		cerr << "Recall: " << recall << endl;
 		cerr << "=============================================" << endl;
 	}
 
