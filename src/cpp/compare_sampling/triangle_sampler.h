@@ -445,8 +445,12 @@ void compare_statistics(set<weighted_triangle> &all_triangles,
 		}
 
 		long double recall = 0.0;
-		for (int i = 0; i < k; i++) {
-			recall += (ranks[i] <= k);
+		if (sampled_triangles.size() == 0) {
+			recall = -1;
+		} else {
+			for (int i = 0; i < k; i++) {
+				recall += (ranks[i] <= k);
+			}
 		}
 
 		recall /= K;
