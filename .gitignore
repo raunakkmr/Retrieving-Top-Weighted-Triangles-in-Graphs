@@ -8,6 +8,10 @@ output/
 data/
 old-files/
 
+src/cpp/*.o
+src/cpp/compare_sampling/*.o
+src/cpp/compare_deterministic/*.o
+
 docs/*.aux
 docs/*.bbl
 docs/*.blg
