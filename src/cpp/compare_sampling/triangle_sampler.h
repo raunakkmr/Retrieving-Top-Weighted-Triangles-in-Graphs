@@ -433,6 +433,9 @@ void compare_statistics(set<weighted_triangle> &all_triangles,
 			}
 			curr_tri++;
 
+			// // to speed up finding time and inc for datasets, remove later
+			// if (num_found == K || sampled_triangles.size() == 0) break;
+
 			if (num_found != curr_tri && !first_break) {
 				first_break = true;
 				cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;

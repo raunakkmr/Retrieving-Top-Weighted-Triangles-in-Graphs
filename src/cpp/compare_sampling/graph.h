@@ -205,9 +205,9 @@ Graph read_graph(string filename) {
 // to an integer. The distribution of the weights does not change. If the
 // maximum edge weight was too large, then prints a warning.
 void modify_weights(Graph &G, double p=1.0) {
-  // if ((long long) p == 1) {
-  //   return;
-  // }
+  if ((long long) p == 1) {
+    return;
+  }
   long long max_weight_edge = -1;
   long long num_edges = 0;
   for (int u = 0; u < (int) G.size(); u++) {
