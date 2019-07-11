@@ -23,7 +23,7 @@ declare -a times=(
     3
     0.05
     3
-    50
+    100
 )
 declare -a incs=(
     0.3
@@ -36,10 +36,11 @@ declare -a incs=(
     0.3
     0.5
     0.3
-    5
+    10
 )
 make -C ../src/cpp/compare_sampling clean
 make -C ../src/cpp/compare_sampling
+mkdir ../output/
 mkdir ../output/compare_sampling
 for i in "${!datasets[@]}"
 do
@@ -48,3 +49,4 @@ do
     inc=${incs[$i]}
     ../src/cpp/compare_sampling/clique_sampler ../data/$dataset/$dataset 1 25 1.0 $time $inc &> ../output/compare_sampling/${dataset}
 done
+../src/cpp/compare_sampling/clique_sampler ../data/temporal-reddit-reply.txt 1 25 1.0 500 50 &> ../output/compare_sampling/temporal-reddit-reply

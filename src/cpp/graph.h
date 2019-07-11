@@ -154,29 +154,52 @@ degeneracy_info compute_degeneracy(Graph& G) {
 
 // filename contains the path and common prefix of the datafiles
 Graph read_graph(string filename) {
-  ifstream simplices(filename + "-simplices.txt", ifstream::in);
-  ifstream nverts(filename + "-nverts.txt", ifstream::in);
-  ifstream times(filename + "-times.txt", ifstream::in);
-
-  cerr << "reading in graph " << filename << endl;
 
   // no use for the times right now
   map<int, map<int, long long>> weight;
   map<int, int> label;
-  int ns, nnodes = 0;
-  while (nverts >> ns) {
-    vector<int> simplex(ns);
-    for (int i = 0; i < ns; i++) {
-      simplices >> simplex[i];
-      if (!label.count(simplex[i])) {
-        label[simplex[i]] = nnodes++;
-      }
-    }
+  int nnodes = 0;
 
-    for (int i = 0; i < ns; i++) {
-      for (int j = i+1; j < ns; j++) {
-        weight[simplex[i]][simplex[j]]++;
-        weight[simplex[j]][simplex[i]]++;
+  cerr << "reading in graph " << filename << endl;
+
+  if (filename.find("reddit") != string::npos) {
+    ifstream edges(filename, ifstream::in);
+
+    int u, v, t;
+
+    while (edges >> u) {
+      edges >> v; edges >> t;
+      if (!label.count(u)) {
+        label[u] = nnodes++;
+      }
+      if (!label.count(v)) {
+        label[v] = nnodes++;
+      }
+
+      weight[u][v]++;
+      weight[v][u]++;
+    }
+  } else {
+    ifstream simplices(filename + "-simplices.txt", ifstream::in);
+    ifstream nverts(filename + "-nverts.txt", ifstream::in);
+    ifstream times(filename + "-times.txt", ifstream::in);
+
+    int ns = 0;
+
+    while (nverts >> ns) {
+      vector<int> simplex(ns);
+      for (int i = 0; i < ns; i++) {
+        simplices >> simplex[i];
+        if (!label.count(simplex[i])) {
+          label[simplex[i]] = nnodes++;
+        }
+      }
+
+      for (int i = 0; i < ns; i++) {
+        for (int j = i+1; j < ns; j++) {
+          weight[simplex[i]][simplex[j]]++;
+          weight[simplex[j]][simplex[i]]++;
+        }
       }
     }
   }

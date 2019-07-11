@@ -149,6 +149,9 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 	double tot_time;
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
+	struct timespec start2, finish2;
+	double elapsed2;
+	clock_gettime(CLOCK_MONOTONIC, &start2);
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
 	for (int u = 0; u < (int) G.size(); u++) {
@@ -177,6 +180,12 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 	vector<set<weighted_triangle>> counters(nthreads);
 	vector<set<pair<int, int>>> histories(nthreads);
 	int nsamples_per_thread = ceil(nsamples / nthreads);
+
+	clock_gettime(CLOCK_MONOTONIC, &finish2);
+
+	elapsed2 = (finish2.tv_sec - start2.tv_sec);
+	elapsed2 += (finish2.tv_nsec - start2.tv_nsec) / 1000000000.0;
+	cerr << "Pre-processing time: " << elapsed2 << endl;
 
 	auto sample_edge = [&](){
 		long long s = rand64() % cumulative_weights.back();
@@ -214,6 +223,10 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 		}
 	};
 
+	auto parallel_merger = [&](int i, int j) {
+		counters[i].merge(counters[j]);
+	};
+
 	for (int i = 0; i < nthreads; i++) {
 		thread th(parallel_sampler, i);
 		threads[i] = move(th);
@@ -222,28 +235,55 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 		threads[i].join();
 	}
 
+	struct timespec start3, finish3;
+	double elapsed3;
+	clock_gettime(CLOCK_MONOTONIC, &start3);
+
 	/*
-	struct timespec start2, finish2;
-	double elapsed;
-	clock_gettime(CLOCK_MONOTONIC, &start2);
+
+	for (int i = 1; i < counters.size(); i++) {
+		counters[0].merge(counters[i]);
+	}
+
 	*/
-	// TODO: Can be made faster with inplace merge.
-	set<weighted_triangle> counter;
-	for (const auto &c : counters) {
-		for (const auto &t : c) {
-			counter.insert(t);
+
+	// /*
+	// Parallel merging.
+
+	int pow2_sz = 1;
+	int log_val = (int) ceil(log2(nthreads));
+	for (int i = 0; i < log_val; i++) {
+		pow2_sz *= 2;
+	}
+
+	for (int i = counters.size(); i < pow2_sz; i++) {
+		counters.push_back(set<weighted_triangle>());
+	}
+
+	vector<thread> merge_threads(pow2_sz);
+	int val = 1;
+	for (int level = 1; level < pow2_sz+1; level++) {
+		val *= 2;
+		for (int i = 0; i < (int) counters.size()/val; i++) {
+			thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
+			merge_threads[i*val] = move(merge_th);
+		}
+		for (int i = 0; i < (int) counters.size()/val; i++) {
+			merge_threads[i*val].join();
 		}
 	}
-	/*
-	clock_gettime(CLOCK_MONOTONIC, &finish2);
 
-	elapsed = (finish2.tv_sec - start2.tv_sec);
-	elapsed += (finish2.tv_nsec - start2.tv_nsec) / 1000000000.0;
-	cerr << "Join time: " << elapsed << endl;
-	*/
+	// */
 
-	cerr << "Found " << counter.size() << " triangles." << endl;
-	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+	clock_gettime(CLOCK_MONOTONIC, &finish3);
+	elapsed3 = (finish3.tv_sec - start3.tv_sec);
+	elapsed3 += (finish3.tv_nsec - start3.tv_nsec) / 1000000000.0;
+	cerr << "Merge time: " << elapsed3 << endl;
+
+	// cerr << "Found " << counter.size() << " triangles." << endl;
+	// if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+	cerr << "Found " << counters[0].size() << " triangles." << endl;
+	if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
 
 	// double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	clock_gettime(CLOCK_MONOTONIC, &finish);
@@ -254,7 +294,8 @@ set<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthread
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
 	cerr << endl;
 
-	return counter;
+	// return counter;
+	return counters[0];
 }
 
 set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {
@@ -834,21 +875,21 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 		}
 	}
 
-	cerr << "=============================================" << endl;
-	cerr << "Ranks of top " << k << " triangles" << endl;
-	cerr << "=============================================" << endl;
-	for (auto rank : ranks) {
-		cerr << rank << " ";
-	}
-	cerr << endl;
+	// cerr << "=============================================" << endl;
+	// cerr << "Ranks of top " << k << " triangles" << endl;
+	// cerr << "=============================================" << endl;
+	// for (auto rank : ranks) {
+	// 	cerr << rank << " ";
+	// }
+	// cerr << endl;
 
-	cerr << "=============================================" << endl;
-	cerr << "Percentiles of top " << k << " triangles" << endl;
-	cerr << "=============================================" << endl;
-	for (auto percentile: percentiles) {
-		cerr << percentile << " ";
-	}
-	cerr << endl;
+	// cerr << "=============================================" << endl;
+	// cerr << "Percentiles of top " << k << " triangles" << endl;
+	// cerr << "=============================================" << endl;
+	// for (auto percentile: percentiles) {
+	// 	cerr << percentile << " ";
+	// }
+	// cerr << endl;
 
 	long double accuracy = 0.0;
 	for (int i = 0; i < k; i++) {
@@ -859,20 +900,20 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 	cerr << "Accuracy: " << accuracy << endl;
 	cerr << "=============================================" << endl;
 
-	cerr << "=============================================" << endl;
-	cerr << "Weights of true top " << k << " triangles" << endl;
-	cerr << "=============================================" << endl;
-	for (const auto &wt : top_true_weights) {
-		cerr << wt << " ";
-	}
-	cerr << endl;
-	cerr << "=============================================" << endl;
-	cerr << "Weights of sampled top " << k << " triangles" << endl;
-	cerr << "=============================================" << endl;
-	for (const auto &wt : top_sampled_weights) {
-		cerr << wt << " ";
-	}
-	cerr << endl;
+	// cerr << "=============================================" << endl;
+	// cerr << "Weights of true top " << k << " triangles" << endl;
+	// cerr << "=============================================" << endl;
+	// for (const auto &wt : top_true_weights) {
+	// 	cerr << wt << " ";
+	// }
+	// cerr << endl;
+	// cerr << "=============================================" << endl;
+	// cerr << "Weights of sampled top " << k << " triangles" << endl;
+	// cerr << "=============================================" << endl;
+	// for (const auto &wt : top_sampled_weights) {
+	// 	cerr << wt << " ";
+	// }
+	// cerr << endl;
 
 	cerr << endl;
 }

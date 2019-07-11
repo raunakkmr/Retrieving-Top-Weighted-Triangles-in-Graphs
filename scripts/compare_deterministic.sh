@@ -14,9 +14,11 @@ declare -a datasets=(
 )
 make -C ../src/cpp/compare_deterministic clean
 make -C ../src/cpp/compare_deterministic
+mkdir ../output/
 mkdir ../output/compare_deterministic
 for i in "${!datasets[@]}"
 do
     dataset=${datasets[$i]}
     ../src/cpp/compare_deterministic/clique_sampler ../data/$dataset/$dataset 1 25 1.0 0 0 &> ../output/compare_deterministic/${dataset}
 done
+../src/cpp/compare_deterministic/clique_sampler ../data/temporal-reddit-reply.txt 1 25 1.0 0 0 &> ../output/compare_deterministic/temporal-reddit-reply
