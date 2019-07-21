@@ -70,11 +70,11 @@ int main(int argc, char* argv[]) {
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
-  auto wedge_sampling_tri = wedge_sampler(G, NUM_SAMPLES_WEDGE);
-  auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
+  // auto wedge_sampling_tri = wedge_sampler(G, NUM_SAMPLES_WEDGE);
+  // auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
   // auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
-  auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(G, K);
+  // auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(G, K);
   
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
@@ -82,22 +82,22 @@ int main(int argc, char* argv[]) {
       cerr << "*** Comparing edge sampling ***" << endl;
       compare_statistics(all_tris, edge_sampling_tri, K);
       cerr << "*** Comparing parallel edge sampling ***" << endl;
-      compare_statistics(all_tris, edge_sampling_tri_parallel, K);
+      compare_statistics_vector(all_tris, edge_sampling_tri_parallel, K);
     }
-    if (NUM_SAMPLES_WEDGE > 0) {
-      cerr << "*** Comparing wedge sampling ***" << endl;
-      compare_statistics(all_tris, wedge_sampling_tri, K);
-    }
-    if (NUM_SAMPLES_PATH > 0) {
-      cerr << "*** Comparing path sampling ***" << endl;
-      compare_statistics(all_tris, path_sampling_tri, K);
-    }
+    // if (NUM_SAMPLES_WEDGE > 0) {
+    //   cerr << "*** Comparing wedge sampling ***" << endl;
+    //   compare_statistics(all_tris, wedge_sampling_tri, K);
+    // }
+    // if (NUM_SAMPLES_PATH > 0) {
+    //   cerr << "*** Comparing path sampling ***" << endl;
+    //   compare_statistics(all_tris, path_sampling_tri, K);
+    // }
     // cerr << "*** Comparing heavy light sampling ***" << endl;
     // compare_statistics(all_tris, heavy_light_sampling_tri, K);
     // cerr << "*** Comparing adaptive heavy light ***" << endl;
     // compare_statistics(all_tris, adaptive_heavy_light_tri, K);
-    cerr << "*** Comparing auto thresholded heavy light ***" << endl;
-    compare_statistics(all_tris, auto_thresholded_heavy_light_tri, K);
+    // cerr << "*** Comparing auto thresholded heavy light ***" << endl;
+    // compare_statistics(all_tris, auto_thresholded_heavy_light_tri, K);
 
     // Write out triangles to a file
     bool write_out_stats = false;

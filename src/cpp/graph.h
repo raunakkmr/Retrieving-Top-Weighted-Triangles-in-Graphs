@@ -45,6 +45,14 @@ struct weighted_triangle {
     return vertices < o.vertices;
   }
 
+  inline const bool operator==(const weighted_triangle& o) const {
+    return (weight == o.weight && vertices == o.vertices);
+  }
+
+  inline const bool operator!=(const weighted_triangle& o) const {
+    return (weight != o.weight || vertices != o.vertices);
+  }
+
   friend ostream& operator<<(ostream& stream, const weighted_triangle& t) {
     stream << '(' << get<0>(t.vertices) << ", " << get<1>(t.vertices) << ", " << get<2>(t.vertices) << ", " << t.weight << ")";
     return stream;
