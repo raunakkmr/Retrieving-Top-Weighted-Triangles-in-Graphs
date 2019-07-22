@@ -14,7 +14,7 @@ long long rand64() {
 struct full_edge {
   int src, dst;
   long long wt;
-  bool operator<(const full_edge& o) const {
+  inline bool operator<(const full_edge& o) const {
     if (o.wt != wt) return wt < o.wt;
     return make_pair(src, dst) < make_pair(o.src, o.dst);
   }
@@ -24,7 +24,7 @@ struct half_edge {
   int dst;
   long long wt;
   // THIS CANNOT BE CHANGED SINCE IT IS USED BY PATH SAMPLER
-  const bool operator<(const half_edge& o) const {
+  inline const bool operator<(const half_edge& o) const {
     if (dst == o.dst) return wt > o.wt;
     return dst < o.dst;
   }
@@ -40,9 +40,17 @@ struct weighted_triangle {
     weight = wt;
   }
 
-  const bool operator<(const weighted_triangle& o) const {
+  inline const bool operator<(const weighted_triangle& o) const {
     if (weight != o.weight) return weight > o.weight;
     return vertices < o.vertices;
+  }
+
+  inline const bool operator==(const weighted_triangle& o) const {
+    return (weight == o.weight && vertices == o.vertices);
+  }
+
+  inline const bool operator!=(const weighted_triangle& o) const {
+    return (weight != o.weight || vertices != o.vertices);
   }
 
   friend ostream& operator<<(ostream& stream, const weighted_triangle& t) {
@@ -162,7 +170,7 @@ Graph read_graph(string filename) {
 
   cerr << "reading in graph " << filename << endl;
 
-  if (filename.find("reddit")) {
+  if (filename.find("reddit") != string::npos) {
     ifstream edges(filename, ifstream::in);
 
     int u, v, t;

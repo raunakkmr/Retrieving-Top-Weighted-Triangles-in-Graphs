@@ -227,45 +227,38 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 	auto parallel_merger = [&](int i, int j) {
 		vector<weighted_triangle> W;
 		W.reserve(counters[i].size() + counters[j].size());
-		// /*
 		int a = 0, b = 0, Li = counters[i].size(), Lj = counters[j].size();
 		while (a < Li && b < Lj) {
 			if (counters[i][a] < counters[j][b]) {
-				if (a == 0 || (counters[i][a] != counters[i][a-1])) {
+				if (counters[i][a] != W.back()) {
 					W.push_back(counters[i][a]);
 				}
 				a++;
 			} else if (counters[i][a] == counters[j][b]) {
-				if (a == 0 || (counters[i][a] != counters[i][a-1])) {
+				if (counters[i][a] != W.back()) {
 					W.push_back(counters[i][a]);
 				}
 				a++;
 				b++;
 			} else {
-				if (b == 0 || (counters[j][b] != counters[j][b-1])) {
+				if (counters[j][b] != W.back()) {
 					W.push_back(counters[j][b]);
 				}
 				b++;
 			}
 		}
 		while (a < Li) {
-			if (a == 0 || (counters[i][a] != counters[i][a-1])) {
+			if (counters[i][a] != W.back()) {
 				W.push_back(counters[i][a]);
 			}
 			a++;
 		}
 		while (b < Lj) {
-			if (b == 0 || (counters[j][b] != counters[j][b-1])) {
+			if (counters[j][b] != W.back()) {
 				W.push_back(counters[j][b]);
 			}
 			b++;
 		}
-		// */
-		// set<weighted_triangle> Ws;
-		// for (const auto &t : counters[i]) Ws.insert(t);
-		// for (const auto &t : counters[j]) Ws.insert(t);
-		// assert(W.size() == Ws.size());
-		// merge(counters[i].begin(), counters[i].end(), counters[j].begin(), counters[j].end(), back_inserter(W));
 		counters[i].swap(W);
 	};
 
@@ -281,15 +274,6 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 	double elapsed3;
 	clock_gettime(CLOCK_MONOTONIC, &start3);
 
-	/*
-
-	for (int i = 1; i < counters.size(); i++) {
-		counters[0].merge(counters[i]);
-	}
-
-	*/
-
-	// /*
 	// Parallel merging.
 
 	int pow2_sz = 1;
@@ -313,30 +297,14 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 		}
 	}
 
-	// */
-
-	/*
-	set<weighted_triangle> counter;
-	for (const auto& t : counters[0]) {
-		counter.insert(counter.end(), t);
-	}
-	*/
-
-	vector<weighted_triangle> counter;
-	counter.reserve(counters[0].size());
-	copy(counters[0].begin(), counters[0].end(), back_inserter(counter));
-
 	clock_gettime(CLOCK_MONOTONIC, &finish3);
 	elapsed3 = (finish3.tv_sec - start3.tv_sec);
 	elapsed3 += (finish3.tv_nsec - start3.tv_nsec) / 1000000000.0;
 	cerr << "Merge time: " << elapsed3 << endl;
 
-	// cerr << "Found " << counter.size() << " triangles." << endl;
-	// if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
-	cerr << "Found " << counter.size() << " triangles." << endl;
-	if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+	cerr << "Found " << counters[0].size() << " triangles." << endl;
+	if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
 
-	// double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 	clock_gettime(CLOCK_MONOTONIC, &finish);
 
 	tot_time = (finish.tv_sec - start.tv_sec);
@@ -345,8 +313,7 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 	cerr << "Time per sample (s): " << tot_time / nsamples << endl;
 	cerr << endl;
 
-	// return counter;
-	return counter;
+	return counters[0];
 }
 
 set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {

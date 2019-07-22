@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir ../data
 wget https://github.com/arbenson/ScHoLP-Data/archive/1.0.tar.gz
 tar -xzvf 1.0.tar.gz
 gunzip ScHoLP-Data-1.0/*/*.gz
