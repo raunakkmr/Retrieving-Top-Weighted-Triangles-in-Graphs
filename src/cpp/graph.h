@@ -6,6 +6,18 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
+// From https://baptiste-wicht.com/posts/2011/06/write-and-read-binary-files-in-c.html
+
+template<typename T>
+std::istream & binary_read(std::istream& stream, T& value){
+    return stream.read(reinterpret_cast<char*>(&value), sizeof(T));
+}
+
+template<typename T>
+std::ostream& binary_write(std::ostream& stream, const T& value){
+    return stream.write(reinterpret_cast<const char*>(&value), sizeof(T));
+}
+
 long long rand64() {
   return rand() * (1LL << 32) + rand();
 }
@@ -160,59 +172,91 @@ degeneracy_info compute_degeneracy(Graph& G) {
   return retval;
 }
 
-// filename contains the path and common prefix of the datafiles
-Graph read_graph(string filename) {
+// If binary is true then filename is the path to the .binary file which
+// contains the graph in the following form: one line with the number of
+// vertices n, one line with the number of edges m, and 3m lines representing
+// edges (u, v, w).
+// Otherwise, for the simplicial datasets filename contains the path and common
+// prefix of the datafiles. For the temporal-reddit-reply dataset filename is
+// the path to the temporal-reddit-reply.txt file.
+Graph read_graph(string filename, bool binary=false) {
 
   // no use for the times right now
   map<int, map<int, long long>> weight;
   map<int, int> label;
   int nnodes = 0;
+  int nedges = 0;
+  int m = 0;
 
   cerr << "reading in graph " << filename << endl;
 
-  if (filename.find("reddit") != string::npos) {
-    ifstream edges(filename, ifstream::in);
+  if (binary) {
+    ifstream data_file(filename, ios::binary);
 
-    int u, v, t;
+    binary_read(data_file, nnodes);
+    binary_read(data_file, m);
 
-    while (edges >> u) {
-      edges >> v; edges >> t;
+    for (int i = 0; i < m; i++) {
+      int u, v;
+      int w;
+      binary_read(data_file, u);
+      binary_read(data_file, v);
+      binary_read(data_file, w);
       if (!label.count(u)) {
-        label[u] = nnodes++;
+        label[u] = label.size();
       }
       if (!label.count(v)) {
-        label[v] = nnodes++;
+        label[v] = label.size();
       }
 
-      weight[u][v]++;
-      weight[v][u]++;
+      weight[u][v] = (long long) w;
+      weight[v][u] = (long long) w;
     }
+
   } else {
-    ifstream simplices(filename + "-simplices.txt", ifstream::in);
-    ifstream nverts(filename + "-nverts.txt", ifstream::in);
-    ifstream times(filename + "-times.txt", ifstream::in);
+    if (filename.find("reddit") != string::npos) {
+      ifstream edges(filename, ifstream::in);
 
-    int ns = 0;
+      int u, v, t;
 
-    while (nverts >> ns) {
-      vector<int> simplex(ns);
-      for (int i = 0; i < ns; i++) {
-        simplices >> simplex[i];
-        if (!label.count(simplex[i])) {
-          label[simplex[i]] = nnodes++;
+      while (edges >> u) {
+        edges >> v; edges >> t;
+        if (!label.count(u)) {
+          label[u] = nnodes++;
         }
-      }
+        if (!label.count(v)) {
+          label[v] = nnodes++;
+        }
 
-      for (int i = 0; i < ns; i++) {
-        for (int j = i+1; j < ns; j++) {
-          weight[simplex[i]][simplex[j]]++;
-          weight[simplex[j]][simplex[i]]++;
+        weight[u][v]++;
+        weight[v][u]++;
+      }
+    } else {
+      ifstream simplices(filename + "-simplices.txt", ifstream::in);
+      ifstream nverts(filename + "-nverts.txt", ifstream::in);
+      ifstream times(filename + "-times.txt", ifstream::in);
+
+      int ns = 0;
+
+      while (nverts >> ns) {
+        vector<int> simplex(ns);
+        for (int i = 0; i < ns; i++) {
+          simplices >> simplex[i];
+          if (!label.count(simplex[i])) {
+            label[simplex[i]] = nnodes++;
+          }
+        }
+
+        for (int i = 0; i < ns; i++) {
+          for (int j = i+1; j < ns; j++) {
+            weight[simplex[i]][simplex[j]]++;
+            weight[simplex[j]][simplex[i]]++;
+          }
         }
       }
     }
   }
 
-  int nedges = 0;
   Graph G(nnodes);
   for (auto& e0 : weight) {
     for (auto& e1 : e0.second) {

@@ -276,9 +276,10 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 
 	// Parallel merging.
 
-	int pow2_sz = 1;
-	while (pow2_sz < nthreads) pow2_sz *= 2;;
+	// int pow2_sz = 1;
+	// while (pow2_sz < nthreads) pow2_sz *= 2;;
 
+	int pow2_sz = (int) ceil(log2(nthreads));
 
 	for (int i = counters.size(); i < pow2_sz; i++) {
 		counters.push_back(vector<weighted_triangle>());
