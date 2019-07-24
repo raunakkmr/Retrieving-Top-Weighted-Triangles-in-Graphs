@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
   binary_write(out_file, m);
 
   auto get_bytes = [](int x) {
-    if (x <= numeric_limits<char>::max()) {
+    if (x <= numeric_limits<unsigned char>::max()) {
       return 0;
     } else if (x <= numeric_limits<short>::max()) {
       return 1;
@@ -41,9 +41,9 @@ int main(int argc, char* argv[]) {
     for (auto &e : G[u]) {
       if (u < e.dst) {
         int bytes = 0;
-        // uses 2 as a special code that the weight is 1.
+        // uses last 4 bits to indicate whether its a small weight edge or not.
         // call it premature optimization but it saves a lot
-        bytes |= (e.wt == 1 ? 2 : get_bytes(e.wt));
+        bytes |= (e.wt <= 12 ? e.wt-1 : 12 + get_bytes(e.wt));
         bytes <<= 2;
         bytes |= get_bytes(e.dst);
         bytes <<= 2;
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         binary_compressed_write(out_file, u);
         binary_compressed_write(out_file, e.dst);
         est_bytes += 3 + get_bytes(u) + get_bytes(e.dst);
-        if (e.wt > 1) {
+        if (e.wt > 12) {
           binary_compressed_write(out_file, e.wt);
           est_bytes += 1 + get_bytes(e.wt);
         }

@@ -6,28 +6,56 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
-// From https://baptiste-wicht.com/posts/2011/06/write-and-read-binary-files-in-c.html
-inline int binary_read(std::istream& stream, int nbytes){
-  if (nbytes == 0) return 1;
+class BinaryReader {
+  const static int BLENGTH = 1024 * 1024;
+  char buf[2 * BLENGTH + 4];
+  int curr = 0, next_to_read = 0;
 
-  int res = 0;
-  if (nbytes == 1) {
-    char c;
-    stream.read(reinterpret_cast<char*>(&c), nbytes);
-    res = c;
-  } else if (nbytes == 2) {
-    short c;
-    stream.read(reinterpret_cast<char*>(&c), nbytes);
-    res = c;
-  } else if (nbytes == 4) {
-    int c;
-    stream.read(reinterpret_cast<char*>(&c), nbytes);
-    res = c;
-  } else {
-    throw "not yet implemented";
+  istream& stream;
+
+public:
+  BinaryReader(istream& stream) : stream(stream) {
+    stream.read(buf, 2 * BLENGTH);
   }
-  return res;
-}
+
+  inline int read(int nbytes) {
+    int res = 0;
+    if (nbytes == 1) {
+      res = *reinterpret_cast<unsigned char*>(buf + curr);
+    } else if (nbytes == 2) {
+      res = *reinterpret_cast<short*>(buf + curr);
+    } else if (nbytes == 4) {
+      res = *reinterpret_cast<int*>(buf + curr);
+    } else {
+      throw "not yet implemented";
+    }
+
+    curr += nbytes;
+    if (curr >= BLENGTH && !next_to_read) {
+      if (!stream.eof()) {
+        stream.read(buf, BLENGTH);
+      }
+      // When reading into this circular buffer,
+      // an integer might get split at the edges,
+      // so we assume the maximum contiguous chunk
+      // representing an int is at most length 4, 
+      // and copy over 3 bytes from the beginning to make sure
+      // this never happens
+      buf[2 * BLENGTH] = buf[0];
+      buf[2 * BLENGTH + 1] = buf[1];
+      buf[2 * BLENGTH + 2] = buf[2];
+      next_to_read = 1;
+    } else if (curr >= 2 * BLENGTH && next_to_read) {
+      curr %= 2 * BLENGTH;
+      if (!stream.eof()) {
+        stream.read(buf+BLENGTH, BLENGTH);
+      }
+      next_to_read = 0;
+    }
+
+    return res;
+  }
+};
 
 template<typename T>
 void binary_write(std::ostream& stream, T value){
@@ -35,8 +63,8 @@ void binary_write(std::ostream& stream, T value){
 }
 
 inline void binary_compressed_write(std::ostream& stream, int x) {
-  if (x <= numeric_limits<char>::max()) {
-    char value = x;
+  if (x <= numeric_limits<unsigned char>::max()) {
+    unsigned char value = x;
     stream.write(reinterpret_cast<char*>(&value), 1);
   } else if (x <= numeric_limits<short>::max()) {
     short value = x;
@@ -222,16 +250,18 @@ Graph read_graph(string filename, bool binary=false) {
   cerr << "reading in graph " << filename << endl;
 
   if (binary) {
-    const unsigned int blength = 1024 * 1024;
-    char buffer[blength];
+    //const unsigned int blength = 1024 * 1024;
+    //char buffer[blength];
 
     ifstream data_file(filename, ios::binary | ios::in);
-    data_file.rdbuf()->pubsetbuf(buffer, blength);
-    data_file.sync_with_stdio(0);
-    data_file.tie(0);
+    //data_file.rdbuf()->pubsetbuf(buffer, blength);
+    //data_file.sync_with_stdio(0);
+    //data_file.tie(0);
 
-    nnodes = binary_read(data_file, 4);
-    m = binary_read(data_file, 4);
+    BinaryReader reader(data_file);
+
+    nnodes = reader.read(4);
+    m = reader.read(4);
 
     int bytes_read = 8;
     cerr << "nodes and edges: " << nnodes << " " << m << endl;
@@ -241,17 +271,22 @@ Graph read_graph(string filename, bool binary=false) {
     //data_file.seekg (0, data_file.beg);
     //cerr << "number of bytes in file: " << length << endl;
     for (int i = 0; i < m; i++) {
-      char type = binary_read(data_file, 1);
+      unsigned char type = reader.read(1);
       bytes_read += 1;
 
-      int bytes[] = {type&3, (type>>2)&3, (type>>4)&3};
-      if (bytes[2] == 2) { // special case when weight is 1 (majority of weights)
-        bytes[2] = -1; //signals to binary read that nothing shall be read
+      int bytes[] = {type&3, (type>>2)&3, (type>>4)};
+
+      int u = reader.read(1+bytes[0]), 
+          v = reader.read(1+bytes[1]);
+
+      int w;
+      if (bytes[2] < 12) { // special case when weight is small (majority of weights)
+        w = 1 + bytes[2];
+        bytes[2] = -1;
+      } else {
+        bytes[2] -= 12;
+        w = reader.read(1+bytes[2]);
       }
-      //cerr << "byte types: " << bytes[0] << " " << bytes[1] << " " << bytes[2] << endl;
-      int u = binary_read(data_file, 1+bytes[0]), 
-          v = binary_read(data_file, 1+bytes[1]),
-          w = binary_read(data_file, 1+bytes[2]);
 
       //cerr << u << " " << v << " " << w << '\n';
       weight[u][v] = w;
