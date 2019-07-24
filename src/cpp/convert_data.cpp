@@ -15,10 +15,17 @@ int main(int argc, char* argv[]) {
 
   int n = G.size();
   int m = 0;
-  for (const auto &u : G) {
-      m += u.size();
+  vector<pair<int, int>> sort_by_deg;
+  for (int u = 0; u < (int) G.size(); u++) {
+      m += G[u].size();
+      sort_by_deg.push_back(make_pair((int) G[u].size(), u));
   }
   m /= 2;
+  sort(sort_by_deg.rbegin(), sort_by_deg.rend());
+  map<int, int> label;
+  for (int i = 0; i < (int) G.size(); i++) {
+    label[sort_by_deg[i].second] = i;
+  }
 
   ofstream out_file(dataset_path+".binary", ios::binary | ios::out);
 
@@ -38,21 +45,23 @@ int main(int argc, char* argv[]) {
 
   int est_bytes = 8;
   for (int u = 0; u < (int) G.size(); u++) {
+    int x = label[u];
     for (auto &e : G[u]) {
-      if (u < e.dst) {
+      int y = label[e.dst];
+      if (x < y) {
         int bytes = 0;
         // uses last 4 bits to indicate whether its a small weight edge or not.
         // call it premature optimization but it saves a lot
         bytes |= (e.wt <= 12 ? e.wt-1 : 12 + get_bytes(e.wt));
         bytes <<= 2;
-        bytes |= get_bytes(e.dst);
+        bytes |= get_bytes(y);
         bytes <<= 2;
-        bytes |= get_bytes(u);
+        bytes |= get_bytes(x);
 
         binary_compressed_write(out_file, bytes);
-        binary_compressed_write(out_file, u);
-        binary_compressed_write(out_file, e.dst);
-        est_bytes += 3 + get_bytes(u) + get_bytes(e.dst);
+        binary_compressed_write(out_file, x);
+        binary_compressed_write(out_file, y);
+        est_bytes += 3 + get_bytes(x) + get_bytes(y);
         if (e.wt > 12) {
           binary_compressed_write(out_file, e.wt);
           est_bytes += 1 + get_bytes(e.wt);
