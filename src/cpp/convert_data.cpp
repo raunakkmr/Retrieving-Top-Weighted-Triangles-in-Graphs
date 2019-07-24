@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
   binary_write(out_file, m);
 
   for (int u = 0; u < (int) G.size(); u++) {
-      for (const auto &e : G[u]) {
+      for (auto &e : G[u]) {
           if (u < e.dst) {
             int a = u, b = e.dst;
             int c = e.wt;

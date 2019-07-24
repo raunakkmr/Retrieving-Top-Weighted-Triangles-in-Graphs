@@ -196,6 +196,8 @@ Graph read_graph(string filename, bool binary=false) {
     binary_read(data_file, nnodes);
     binary_read(data_file, m);
 
+    int label_cnt = 0;
+
     for (int i = 0; i < m; i++) {
       int u, v;
       int w;
@@ -203,10 +205,10 @@ Graph read_graph(string filename, bool binary=false) {
       binary_read(data_file, v);
       binary_read(data_file, w);
       if (!label.count(u)) {
-        label[u] = label.size();
+        label[u] = label_cnt++;
       }
       if (!label.count(v)) {
-        label[v] = label.size();
+        label[v] = label_cnt++;
       }
 
       weight[u][v] = (long long) w;

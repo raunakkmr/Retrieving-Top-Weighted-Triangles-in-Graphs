@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 
     tot_time2 = (finish2.tv_sec - start2.tv_sec);
     tot_time2 += (finish2.tv_nsec - start2.tv_nsec) / 1000000000.0;
-    cerr << "binary read for " << argv[2] << " took " << tot_time1 << " seconds." << endl;
+    cerr << "binary read for " << argv[2] << " took " << tot_time2 << " seconds." << endl;
 
     return 0;
 }
