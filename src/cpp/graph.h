@@ -222,7 +222,13 @@ Graph read_graph(string filename, bool binary=false) {
   cerr << "reading in graph " << filename << endl;
 
   if (binary) {
+    const unsigned int blength = 1024 * 1024;
+    char buffer[blength];
+
     ifstream data_file(filename, ios::binary | ios::in);
+    data_file.rdbuf()->pubsetbuf(buffer, blength);
+    data_file.sync_with_stdio(0);
+    data_file.tie(0);
 
     nnodes = binary_read(data_file, 4);
     m = binary_read(data_file, 4);
