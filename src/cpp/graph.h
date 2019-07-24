@@ -371,6 +371,7 @@ Graph read_graph(string filename, bool binary=false) {
     for (int u = 0; u < (int) G.size(); u++) {
       for (const auto& e : G[u]) {
         int v = e.dst, w = e.wt;
+        nedges++;
         if (u < v) {
           largest_weight = max(largest_weight, (double) w);
           sum_weight += w;
