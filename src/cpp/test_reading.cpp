@@ -10,17 +10,17 @@ int main(int argc, char *argv[]) {
     cin.tie(0);
     srand(0);
 
-    // struct timespec start1, finish1;
-    // double tot_time1;
-    // clock_gettime(CLOCK_MONOTONIC, &start1);
+    struct timespec start1, finish1;
+    double tot_time1;
+    clock_gettime(CLOCK_MONOTONIC, &start1);
 
-    // auto G = read_graph(argv[1]);
+    auto G = read_graph(argv[1]);
 
-    // clock_gettime(CLOCK_MONOTONIC, &finish1);
+    clock_gettime(CLOCK_MONOTONIC, &finish1);
 
-    // tot_time1 = (finish1.tv_sec - start1.tv_sec);
-    // tot_time1 += (finish1.tv_nsec - start1.tv_nsec) / 1000000000.0;
-    // cerr << "Non binary read for " << argv[1] << " took " << tot_time1 << " seconds." << endl;
+    tot_time1 = (finish1.tv_sec - start1.tv_sec);
+    tot_time1 += (finish1.tv_nsec - start1.tv_nsec) / 1000000000.0;
+    cerr << "Non binary read for " << argv[1] << " took " << tot_time1 << " seconds." << endl;
 
     cerr << endl << endl;
 
@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
     double tot_time2;
     clock_gettime(CLOCK_MONOTONIC, &start2);
 
-    // G = read_graph(argv[2], true);
-    auto G = read_graph(argv[2], true);
+    G = read_graph(argv[2], true);
+    // auto G = read_graph(argv[2], true);
 
     clock_gettime(CLOCK_MONOTONIC, &finish2);
 

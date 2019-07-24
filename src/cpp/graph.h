@@ -7,15 +7,46 @@ using namespace std;
 namespace wsdm_2019_graph {
 
 // From https://baptiste-wicht.com/posts/2011/06/write-and-read-binary-files-in-c.html
+inline int binary_read(std::istream& stream, int nbytes){
+  if (nbytes == 0) return 1;
 
-template<typename T>
-std::istream & binary_read(std::istream& stream, T& value){
-    return stream.read(reinterpret_cast<char*>(&value), sizeof(T));
+  int res = 0;
+  if (nbytes == 1) {
+    char c;
+    stream.read(reinterpret_cast<char*>(&c), nbytes);
+    res = c;
+  } else if (nbytes == 2) {
+    short c;
+    stream.read(reinterpret_cast<char*>(&c), nbytes);
+    res = c;
+  } else if (nbytes == 4) {
+    int c;
+    stream.read(reinterpret_cast<char*>(&c), nbytes);
+    res = c;
+  } else {
+    throw "not yet implemented";
+  }
+  return res;
 }
 
 template<typename T>
-std::ostream& binary_write(std::ostream& stream, const T& value){
-    return stream.write(reinterpret_cast<const char*>(&value), sizeof(T));
+void binary_write(std::ostream& stream, T value){
+  stream.write(reinterpret_cast<char*>(&value), sizeof(T));
+}
+
+inline void binary_compressed_write(std::ostream& stream, int x) {
+  if (x <= numeric_limits<char>::max()) {
+    char value = x;
+    stream.write(reinterpret_cast<char*>(&value), 1);
+  } else if (x <= numeric_limits<short>::max()) {
+    short value = x;
+    stream.write(reinterpret_cast<char*>(&value), 2);
+  } else if (x <= numeric_limits<int>::max()) {
+    int value = x;
+    stream.write(reinterpret_cast<char*>(&value), 4);
+  } else {
+    throw "not yet implemented";
+  }
 }
 
 long long rand64() {
@@ -191,31 +222,39 @@ Graph read_graph(string filename, bool binary=false) {
   cerr << "reading in graph " << filename << endl;
 
   if (binary) {
-    ifstream data_file(filename, ios::binary);
+    ifstream data_file(filename, ios::binary | ios::in);
 
-    binary_read(data_file, nnodes);
-    binary_read(data_file, m);
+    nnodes = binary_read(data_file, 4);
+    m = binary_read(data_file, 4);
 
-    int label_cnt = 0;
+    int bytes_read = 8;
+    cerr << "nodes and edges: " << nnodes << " " << m << endl;
 
+    //data_file.seekg (0, data_file.end);
+    //int length = data_file.tellg();
+    //data_file.seekg (0, data_file.beg);
+    //cerr << "number of bytes in file: " << length << endl;
     for (int i = 0; i < m; i++) {
-      int u, v;
-      int w;  // TODO: change to long long.
-      binary_read(data_file, u);
-      binary_read(data_file, v);
-      binary_read(data_file, w);
-      // cerr << i << " " << u << " " << v << " " << w << endl;
-      if (!label.count(u)) {
-        label[u] = label_cnt++;
-      }
-      if (!label.count(v)) {
-        label[v] = label_cnt++;
-      }
+      char type = binary_read(data_file, 1);
+      bytes_read += 1;
 
-      weight[u][v] = (long long) w;
-      weight[v][u] = (long long) w;
+      int bytes[] = {type&3, (type>>2)&3, (type>>4)&3};
+      if (bytes[2] == 2) { // special case when weight is 1 (majority of weights)
+        bytes[2] = -1; //signals to binary read that nothing shall be read
+      }
+      //cerr << "byte types: " << bytes[0] << " " << bytes[1] << " " << bytes[2] << endl;
+      int u = binary_read(data_file, 1+bytes[0]), 
+          v = binary_read(data_file, 1+bytes[1]),
+          w = binary_read(data_file, 1+bytes[2]);
+
+      //cerr << u << " " << v << " " << w << '\n';
+      weight[u][v] = w;
+      weight[v][u] = w;
+
+      bytes_read += 3 + bytes[0] + bytes[1] + bytes[2];
+      //cerr << bytes_read << " " << data_file.tellg() << '\n';
     }
-
+    cerr << bytes_read << " bytes read" << endl;
   } else {
     if (filename.find("reddit") != string::npos) {
       ifstream edges(filename, ifstream::in);
@@ -264,9 +303,15 @@ Graph read_graph(string filename, bool binary=false) {
   vector<double> all_weights;
 
   Graph G(nnodes);
+  cerr << "constructing graph with " << nnodes << " nodes" << endl;
   for (auto& e0 : weight) {
     for (auto& e1 : e0.second) {
-      int u = label[e0.first], v = label[e1.first];
+      int u, v;
+      if (!binary) {
+        u = label[e0.first], v = label[e1.first];
+      } else {
+        u = e0.first, v = e1.first;
+      }
       long long w = e1.second;
       G[u].push_back({v, w});
       nedges++;
@@ -277,6 +322,8 @@ Graph read_graph(string filename, bool binary=false) {
       }
     }
   }
+
+  cerr << "done constructing graph" << endl;
 
   nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
   median_weight = all_weights[all_weights.size() / 2];
