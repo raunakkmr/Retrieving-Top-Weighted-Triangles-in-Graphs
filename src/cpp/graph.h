@@ -200,10 +200,11 @@ Graph read_graph(string filename, bool binary=false) {
 
     for (int i = 0; i < m; i++) {
       int u, v;
-      int w;
+      int w;  // TODO: change to long long.
       binary_read(data_file, u);
       binary_read(data_file, v);
       binary_read(data_file, w);
+      // cerr << i << " " << u << " " << v << " " << w << endl;
       if (!label.count(u)) {
         label[u] = label_cnt++;
       }
@@ -259,6 +260,9 @@ Graph read_graph(string filename, bool binary=false) {
     }
   }
 
+  double largest_weight = 0, sum_weight = 0, median_weight = 0;
+  vector<double> all_weights;
+
   Graph G(nnodes);
   for (auto& e0 : weight) {
     for (auto& e1 : e0.second) {
@@ -266,8 +270,19 @@ Graph read_graph(string filename, bool binary=false) {
       long long w = e1.second;
       G[u].push_back({v, w});
       nedges++;
+      if (u < v) {
+        largest_weight = max(largest_weight, (double) w);
+        sum_weight += w;
+        all_weights.push_back(w);
+      }
     }
   }
+
+  nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
+  median_weight = all_weights[all_weights.size() / 2];
+  cerr << "Largest edge weight is " << largest_weight << endl;
+  cerr << "Mean edge weight is " << (2 * sum_weight) / (nedges) << endl;
+  cerr << "Median edge weight is " << median_weight << endl;
 
   cerr << "read in a graph with " << nnodes << " nodes and " << nedges / 2 << " edges" << endl;
   cerr << "Average degree: " << nedges / nnodes << endl;

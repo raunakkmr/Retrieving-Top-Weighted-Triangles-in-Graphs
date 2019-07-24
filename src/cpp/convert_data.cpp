@@ -29,7 +29,8 @@ int main(int argc, char* argv[]) {
       for (auto &e : G[u]) {
           if (u < e.dst) {
             int a = u, b = e.dst;
-            int c = e.wt;
+            int c = e.wt;  // TODO: change to long long.
+            // cerr << " " << a << " " << b << " " << c << endl;
             binary_write(out_file, a);
             binary_write(out_file, b);
             binary_write(out_file, c);
