@@ -249,6 +249,7 @@ Graph read_graph(string filename, bool binary=false) {
 
   cerr << "reading in graph " << filename << endl;
 
+  Graph G;
   if (binary) {
     //const unsigned int blength = 1024 * 1024;
     //char buffer[blength];
@@ -263,7 +264,7 @@ Graph read_graph(string filename, bool binary=false) {
     nnodes = reader.read(4);
     m = reader.read(4);
     
-    weight.reserve(nnodes);
+    G.resize(nnodes);
 
     int bytes_read = 8;
     cerr << "nodes and edges: " << nnodes << " " << m << endl;
@@ -291,8 +292,8 @@ Graph read_graph(string filename, bool binary=false) {
       }
 
       //cerr << u << " " << v << " " << w << '\n';
-      weight[u][v] = w;
-      weight[v][u] = w;
+      G[u].push_back({v, w});
+      G[v].push_back({u, w});
 
       bytes_read += 3 + bytes[0] + bytes[1] + bytes[2];
       //cerr << bytes_read << " " << data_file.tellg() << '\n';
@@ -345,27 +346,39 @@ Graph read_graph(string filename, bool binary=false) {
   double largest_weight = 0, sum_weight = 0, median_weight = 0;
   vector<double> all_weights;
 
-  Graph G(nnodes);
   cerr << "constructing graph with " << nnodes << " nodes" << endl;
-  for (auto& e0 : weight) {
-    for (auto& e1 : e0.second) {
-      int u, v;
-      if (!binary) {
-        u = label[e0.first], v = label[e1.first];
-      } else {
-        u = e0.first, v = e1.first;
+  if (!binary) {
+    G.resize(nnodes);
+    for (auto& e0 : weight) {
+      for (auto& e1 : e0.second) {
+        int u, v;
+        if (!binary) {
+          u = label[e0.first], v = label[e1.first];
+        } else {
+          u = e0.first, v = e1.first;
+        }
+        long long w = e1.second;
+        G[u].push_back({v, w});
+        nedges++;
+        if (u < v) {
+          largest_weight = max(largest_weight, (double) w);
+          sum_weight += w;
+          all_weights.push_back(w);
+        }
       }
-      long long w = e1.second;
-      G[u].push_back({v, w});
-      nedges++;
-      if (u < v) {
-        largest_weight = max(largest_weight, (double) w);
-        sum_weight += w;
-        all_weights.push_back(w);
+    }
+  } else {
+    for (int u = 0; u < (int) G.size(); u++) {
+      for (const auto& e : G[u]) {
+        int v = e.dst, w = e.wt;
+        if (u < v) {
+          largest_weight = max(largest_weight, (double) w);
+          sum_weight += w;
+          all_weights.push_back(w);
+        }
       }
     }
   }
-
   cerr << "done constructing graph" << endl;
 
   nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
