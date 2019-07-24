@@ -291,7 +291,7 @@ Graph read_graph(string filename, bool binary=false) {
         w = reader.read(1+bytes[2]);
       }
 
-      //cerr << u << " " << v << " " << w << '\n';
+      // cerr << u << " " << v << " " << w << '\n';
       G[u].push_back({v, w});
       G[v].push_back({u, w});
 
@@ -343,8 +343,8 @@ Graph read_graph(string filename, bool binary=false) {
     }
   }
 
-  double largest_weight = 0, sum_weight = 0, median_weight = 0;
-  vector<double> all_weights;
+  // double largest_weight = 0, sum_weight = 0, median_weight = 0;
+  // vector<double> all_weights;
 
   cerr << "constructing graph with " << nnodes << " nodes" << endl;
   if (!binary) {
@@ -360,14 +360,18 @@ Graph read_graph(string filename, bool binary=false) {
         long long w = e1.second;
         G[u].push_back({v, w});
         nedges++;
+        /*
         if (u < v) {
           largest_weight = max(largest_weight, (double) w);
           sum_weight += w;
           all_weights.push_back(w);
         }
+        */
       }
     }
   } else {
+    nedges = 2*m;
+    /*
     for (int u = 0; u < (int) G.size(); u++) {
       for (const auto& e : G[u]) {
         int v = e.dst, w = e.wt;
@@ -379,14 +383,17 @@ Graph read_graph(string filename, bool binary=false) {
         }
       }
     }
+    */
   }
   cerr << "done constructing graph" << endl;
 
+  /*
   nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
   median_weight = all_weights[all_weights.size() / 2];
   cerr << "Largest edge weight is " << largest_weight << endl;
   cerr << "Mean edge weight is " << (2 * sum_weight) / (nedges) << endl;
   cerr << "Median edge weight is " << median_weight << endl;
+  */
 
   cerr << "read in a graph with " << nnodes << " nodes and " << nedges / 2 << " edges" << endl;
   cerr << "Average degree: " << nedges / nnodes << endl;
