@@ -241,7 +241,7 @@ degeneracy_info compute_degeneracy(Graph& G) {
 Graph read_graph(string filename, bool binary=false) {
 
   // no use for the times right now
-  map<int, map<int, long long>> weight;
+  unordered_map<int, unordered_map<int, long long>> weight;
   map<int, int> label;
   int nnodes = 0;
   int nedges = 0;
@@ -262,6 +262,8 @@ Graph read_graph(string filename, bool binary=false) {
 
     nnodes = reader.read(4);
     m = reader.read(4);
+    
+    weight.reserve(nnodes);
 
     int bytes_read = 8;
     cerr << "nodes and edges: " << nnodes << " " << m << endl;
