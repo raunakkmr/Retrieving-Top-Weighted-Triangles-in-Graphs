@@ -40,13 +40,8 @@ int main(int argc, char* argv[]) {
       int a = get<0>(t.vertices);
       int b = get<1>(t.vertices);
       int c = get<2>(t.vertices);
-      // binary_write(triangle_file, w);
-      // binary_write(triangle_file, a);
-      // binary_write(triangle_file, b);
-      // binary_write(triangle_file, c);
       int bytes = 0;
-      // uses 2 as a special code that the weight is 1.
-      // call it premature optimization but it saves a lot
+      // uses 2 as a special code that the weight is 3.
       bytes |= (w == 3 ? 2 : get_bytes(w));
       bytes <<= 2;
       bytes |= get_bytes(a);
