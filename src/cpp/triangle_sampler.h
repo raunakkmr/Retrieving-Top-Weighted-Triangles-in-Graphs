@@ -831,11 +831,15 @@ pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G,
 
 }
 
+
+/*
+ * For the heavy light and adaptive based methods below, we don't include the 
+ * preprocessing time, since this can be precomputed as we read in the graph.
+ */
 set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	cerr << "=============================================" << endl;
 	cerr << "Running heavy light sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
 
 	vector<full_edge> edges;
 	for (int i = 0; i < (int) G.size(); i++) {
@@ -847,6 +851,7 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	}
 	sort(edges.rbegin(), edges.rend());
 
+	double st = clock();
 	Graph Gh, Gl;
 	for (int i = 0; i < (int) (p * edges.size()); i++) {
 		Gh.resize(max(edges[i].dst+1, (int) Gh.size()));
@@ -915,8 +920,8 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 	cerr << "=============================================" << endl;
 	cerr << "Running adaptive heavy light for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
 
+	double pre_st = clock();
 	vector<full_edge> edges;
 	vector<map<int, long long>> exists(G.size());
 	for (int i = 0; i < (int) G.size(); i++) {
@@ -929,7 +934,8 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 		}
 	}
 	sort(edges.rbegin(), edges.rend());
-
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+	double st = clock();
 	set<weighted_triangle> counter, topk;
 
 	Graph Gh;
@@ -1049,8 +1055,8 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 	cerr << "=============================================" << endl;
 	cerr << "Running auto thresholded heavy light for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
 
+	double pre_st = clock();
 	vector<full_edge> edges;
 	vector<map<int, long long>> exists(G.size());
 	map<long long, int> edge_distribution;
@@ -1066,7 +1072,9 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 		}
 	}
 	sort(edges.rbegin(), edges.rend());
-
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+	
+	double st = clock();
 	set<weighted_triangle> counter, topk;
 
 	Graph Gh;
@@ -1082,8 +1090,8 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 
 		double delta_ei = double(ei.wt - (--edge_distribution.lower_bound(ei.wt))->first) / edge_distribution[ei.wt];
 		double delta_ej = double(ej.wt - (--edge_distribution.lower_bound(ej.wt))->first) / edge_distribution[ej.wt];
-		double ei_cost = exists[ei.src].size() + exists[ei.dst].size();
-		double ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size());
+		double ei_cost = exists[ei.src].size() + exists[ei.dst].size() + 1;
+		double ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size()) + 4;
 
 		if (delta_ej / ej_cost > delta_ei / ei_cost) {
 			// Advance j, H2 and H3 cases (at least two heavy)
