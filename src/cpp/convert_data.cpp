@@ -17,8 +17,8 @@ int main(int argc, char* argv[]) {
   int m = 0;
   vector<pair<int, int>> sort_by_deg;
   for (int u = 0; u < (int) G.size(); u++) {
-      m += G[u].size();
-      sort_by_deg.push_back(make_pair((int) G[u].size(), u));
+    m += G[u].size();
+    sort_by_deg.push_back(make_pair((int) G[u].size(), u));
   }
   m /= 2;
   sort(sort_by_deg.rbegin(), sort_by_deg.rend());
@@ -26,6 +26,9 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i < (int) G.size(); i++) {
     label[sort_by_deg[i].second] = i;
   }
+
+  // Prune out degree 0 nodes
+  n = label.size();
 
   ofstream out_file(dataset_path+".binary", ios::binary | ios::out);
 

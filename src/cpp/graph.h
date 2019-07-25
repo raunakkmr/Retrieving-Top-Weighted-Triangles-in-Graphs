@@ -314,8 +314,11 @@ Graph read_graph(string filename, bool binary=false) {
           label[v] = nnodes++;
         }
 
-        weight[u][v]++;
-        weight[v][u]++;
+        if (u < v) {
+          weight[u][v]++;
+        } else {
+          weight[v][u]++;
+        }
       }
     } else {
       ifstream simplices(filename + "-simplices.txt", ifstream::in);
@@ -335,8 +338,14 @@ Graph read_graph(string filename, bool binary=false) {
 
         for (int i = 0; i < ns; i++) {
           for (int j = i+1; j < ns; j++) {
-            weight[simplex[i]][simplex[j]]++;
-            weight[simplex[j]][simplex[i]]++;
+            // We filter out self loops in this step,
+            // but if a simplex has two of the same node,
+            // we double the weight contribution to that node
+            if (simplex[i] < simplex[j]) {
+              weight[simplex[i]][simplex[j]]++;
+            } else if (simplex[i] > simplex[j]) {
+              weight[simplex[j]][simplex[i]]++;
+            }
           }
         }
       }
@@ -351,28 +360,23 @@ Graph read_graph(string filename, bool binary=false) {
     G.resize(nnodes);
     for (auto& e0 : weight) {
       for (auto& e1 : e0.second) {
-        int u, v;
-        if (!binary) {
-          u = label[e0.first], v = label[e1.first];
-        } else {
-          u = e0.first, v = e1.first;
-        }
+        int u = label[e0.first], v = label[e1.first];
         long long w = e1.second;
         G[u].push_back({v, w});
+        G[v].push_back({u, w});
         nedges++;
-        if (u < v) {
-          largest_weight = max(largest_weight, (double) w);
-          sum_weight += w;
-          all_weights.push_back(w);
-        }
+
+        largest_weight = max(largest_weight, (double) w);
+        sum_weight += w;
+        all_weights.push_back(w);
       }
     }
   } else {
     for (int u = 0; u < (int) G.size(); u++) {
       for (const auto& e : G[u]) {
         int v = e.dst, w = e.wt;
-        nedges++;
         if (u < v) {
+          nedges++;
           largest_weight = max(largest_weight, (double) w);
           sum_weight += w;
           all_weights.push_back(w);
@@ -385,11 +389,11 @@ Graph read_graph(string filename, bool binary=false) {
   nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
   median_weight = all_weights[all_weights.size() / 2];
   cerr << "Largest edge weight is " << largest_weight << endl;
-  cerr << "Mean edge weight is " << (2 * sum_weight) / (nedges) << endl;
+  cerr << "Mean edge weight is " << sum_weight / nedges << endl;
   cerr << "Median edge weight is " << median_weight << endl;
 
-  cerr << "read in a graph with " << nnodes << " nodes and " << nedges / 2 << " edges" << endl;
-  cerr << "Average degree: " << nedges / nnodes << endl;
+  cerr << "read in a graph with " << nnodes << " nodes and " << nedges << " edges" << endl;
+  cerr << "Average degree: " << 2.0 * nedges / nnodes << endl;
   return G;
 }
 
