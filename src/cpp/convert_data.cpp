@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
   int m = 0;
   vector<pair<int, int>> sort_by_deg;
   for (int u = 0; u < (int) G.size(); u++) {
+    if (G[u].empty()) continue;
     m += G[u].size();
     sort_by_deg.push_back(make_pair((int) G[u].size(), u));
   }
@@ -48,7 +49,7 @@ int main(int argc, char* argv[]) {
   };
   // */
 
-  int est_bytes = 8;
+  size_t est_bytes = 8;
   for (int u = 0; u < (int) G.size(); u++) {
     int x = label[u];
     for (auto &e : G[u]) {

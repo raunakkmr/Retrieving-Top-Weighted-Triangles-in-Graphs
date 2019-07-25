@@ -16,8 +16,8 @@ vector<weighted_triangle> read_all_triangles_vector(string filename) {
   ifstream tri_file(filename, ios::binary | ios::in);
   BinaryReader reader(tri_file);
 
-  int num_tris = reader.read(4);
-  int bytes_read = 4;
+  long long num_tris = reader.read(4);
+  size_t bytes_read = 4;
 
   cerr << "Number of triangles: " << num_tris << '\n';
 
@@ -30,9 +30,9 @@ vector<weighted_triangle> read_all_triangles_vector(string filename) {
 
     int bytes[] = {type&3, (type>>2)&3, (type>>4)&3, (type>>6)};
 
-    int a = reader.read(1+bytes[0]),
+    int a = reader.read(1+bytes[2]),
         b = reader.read(1+bytes[1]),
-        c = reader.read(1+bytes[2]);
+        c = reader.read(1+bytes[0]);
 
     int w;
     if (bytes[3] == 2) {
