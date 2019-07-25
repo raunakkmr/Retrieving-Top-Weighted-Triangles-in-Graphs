@@ -81,8 +81,7 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	}
 
 	vector<long long> cumulative_weights;
-	// map<int, long long> index_to_weight;
-  vector<long long> index_to_weight;
+	vector<long long> index_to_weight(edge_distribution.size());
 	int count = 0;
 	long long prev = 0;
 	// todo: replace this with p means
@@ -165,8 +164,7 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 	}
 
 	vector<long long> cumulative_weights;
-	// map<int, long long> index_to_weight;
-  vector<long long> index_to_weight;
+	vector<long long> index_to_weight(edge_distribution.size());
 	int count = 0;
 	long long prev = 0;
 	for (const auto &kv : edge_distribution) {
@@ -520,8 +518,7 @@ pair<vector<set<weighted_triangle>>, vector<double>> edge_sampler_time(Graph &G,
 	}
 
 	vector<long long> cumulative_weights;
-	// map<int, long long> index_to_weight;
-  vector<long long> index_to_weight;
+	vector<long long> index_to_weight(edge_distribution.size());
 	int count = 0;
 	long long prev = 0;
 	// todo: replace this with p means
@@ -786,7 +783,6 @@ pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G,
 	return make_pair(counters, times);
 
 }
-
 
 set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	cerr << "=============================================" << endl;
@@ -1133,78 +1129,7 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 
 }
 
-void compare_statistics(set<weighted_triangle> &all_triangles,
-						vector<set<weighted_triangle>> &vec_sampled_triangles, 
-						vector<double> times, int K) {
-	cerr << "=============================================" << endl;
-	cerr << "Comparing sampling statistics" << endl;
-	cerr << "=============================================" << endl;
-
-	vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
-
-	set<long long> unique_weights;
-	for (const auto &T : all_triangles) {
-		unique_weights.insert(T.weight);
-	}
-	vector<long long> weights(unique_weights.begin(), unique_weights.end());
-	sort(weights.rbegin(), weights.rend());
-
-	set<weighted_triangle> sampled_triangles;
-	for (int i = 0; i < times.size(); i++) {
-		cerr << "=============================================" << endl;
-		cerr << "Time: " << times[i] << endl;
-		for (const auto &T : vec_sampled_triangles[i]) {
-			sampled_triangles.insert(T);
-		}
-		int num_found = 0;
-		int curr_tri = 0;
-		bool first_break = 0;
-		int bidx = 0;
-		int k = min(K, (int)sampled_triangles.size());
-		vector<long long> ranks(k);
-
-		for (auto T : all_triangles) {
-			if (sampled_triangles.count(T)) {
-				num_found++;
-				if (num_found < k+1) {
-					ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
-				}
-			}
-			curr_tri++;
-
-			// // to speed up finding time and inc for datasets, remove later
-			// if (num_found == K || sampled_triangles.size() == 0) break;
-
-			if (num_found != curr_tri && !first_break) {
-				first_break = true;
-				cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;
-			}
-
-			if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
-				cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
-				bidx++;
-			}
-		}
-
-		long double recall = 0.0;
-		if (sampled_triangles.size() == 0) {
-			recall = -1;
-		} else {
-			for (int i = 0; i < k; i++) {
-				recall += (ranks[i] <= k);
-			}
-		}
-
-		recall /= K;
-		cerr << "Recall: " << recall << endl;
-		cerr << "=============================================" << endl;
-	}
-
-	cerr << endl;
-}
-
-/*
-void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles, int K) {
+void compare_statistics_set(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles, int K) {
 	cerr << "=============================================" << endl;
 	cerr << "Comparing sampling statistics" << endl;
 	cerr << "=============================================" << endl;
@@ -1295,12 +1220,13 @@ void compare_statistics(set<weighted_triangle>& all_triangles, set<weighted_tria
 
 	cerr << endl;
 }
-*/
 
 void compare_statistics_vector(set<weighted_triangle>& all_triangles, vector<weighted_triangle>& sampled_triangles, int K) {
 	cerr << "=============================================" << endl;
 	cerr << "Comparing sampling statistics" << endl;
 	cerr << "=============================================" << endl;
+
+	cerr << all_triangles.size() << " " << sampled_triangles.size() << endl;
 
 	int num_found = 0;
 	int curr_tri = 0;
@@ -1385,6 +1311,76 @@ void compare_statistics_vector(set<weighted_triangle>& all_triangles, vector<wei
 	// 	cerr << wt << " ";
 	// }
 	// cerr << endl;
+
+	cerr << endl;
+}
+
+void compare_statistics_time(set<weighted_triangle> &all_triangles,
+						vector<set<weighted_triangle>> &vec_sampled_triangles, 
+						vector<double> times, int K) {
+	cerr << "=============================================" << endl;
+	cerr << "Comparing sampling statistics" << endl;
+	cerr << "=============================================" << endl;
+
+	vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
+
+	set<long long> unique_weights;
+	for (const auto &T : all_triangles) {
+		unique_weights.insert(T.weight);
+	}
+	vector<long long> weights(unique_weights.begin(), unique_weights.end());
+	sort(weights.rbegin(), weights.rend());
+
+	set<weighted_triangle> sampled_triangles;
+	for (int i = 0; i < times.size(); i++) {
+		cerr << "=============================================" << endl;
+		cerr << "Time: " << times[i] << endl;
+		for (const auto &T : vec_sampled_triangles[i]) {
+			sampled_triangles.insert(T);
+		}
+		int num_found = 0;
+		int curr_tri = 0;
+		bool first_break = 0;
+		int bidx = 0;
+		int k = min(K, (int)sampled_triangles.size());
+		vector<long long> ranks(k);
+
+		for (auto T : all_triangles) {
+			if (sampled_triangles.count(T)) {
+				num_found++;
+				if (num_found < k+1) {
+					ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
+				}
+			}
+			curr_tri++;
+
+			// // to speed up finding time and inc for datasets, remove later
+			// if (num_found == K || sampled_triangles.size() == 0) break;
+
+			if (num_found != curr_tri && !first_break) {
+				first_break = true;
+				cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;
+			}
+
+			if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
+				cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
+				bidx++;
+			}
+		}
+
+		long double recall = 0.0;
+		if (sampled_triangles.size() == 0) {
+			recall = -1;
+		} else {
+			for (int i = 0; i < k; i++) {
+				recall += (ranks[i] <= k);
+			}
+		}
+
+		recall /= K;
+		cerr << "Recall: " << recall << endl;
+		cerr << "=============================================" << endl;
+	}
 
 	cerr << endl;
 }

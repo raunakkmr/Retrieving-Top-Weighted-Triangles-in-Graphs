@@ -35,18 +35,24 @@ int main(int argc, char* argv[]) {
 
   modify_weights(G, P);
 
-  auto heavy_light_tri = heavy_light_sampler(G);
-  auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);;
-  auto auto_thresholded_tri = auto_thresholded_heavy_light(G, K);
+  auto res = edge_sampler_time(G, MAX_TIME, INC);
+  auto edge_sampling_tri = res.first;
+  auto edge_sampling_times = res.second;
+  res = wedge_sampler_time(G, MAX_TIME, INC);
+  auto wedge_sampling_tri = res.first;
+  auto wedge_sampling_times = res.second;
+  res = path_sampler_time(G, MAX_TIME, INC);
+  auto path_sampling_tri = res.first;
+  auto path_sampling_times = res.second;
   
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
-    cerr << "*** Comparing heavy light***" << endl;
-    compare_statistics(all_tris, heavy_light_tri, K);
-    cerr << "*** Comparing adaptive heavy light***" << endl;
-    compare_statistics(all_tris, adaptive_heavy_light_tri, K);
-    cerr << "*** Comparing auto thresholded heavy light***" << endl;
-    compare_statistics(all_tris, auto_thresholded_tri, K);
+    cerr << "*** Comparing edge sampling ***" << endl;
+    compare_statistics_time(all_tris, edge_sampling_tri, edge_sampling_times, K);
+    cerr << "*** Comparing wedge sampling ***" << endl;
+    compare_statistics_time(all_tris, wedge_sampling_tri, wedge_sampling_times, K);
+    cerr << "*** Comparing path sampling ***" << endl;
+    compare_statistics_time(all_tris, path_sampling_tri, path_sampling_times, K);
 
     // Write out triangles to a file
     bool write_out_stats = false;

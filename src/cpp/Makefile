@@ -11,13 +11,16 @@ test_reading: test_reading.o
 convert_data: convert_data.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
+brute_force_enumerator: brute_force_enumerator.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
 clique_sampler: clique_sampler.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-adaptive_enumerator: adaptive_enumerator.o
+compare_deterministic: compare_deterministic.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-brute_force_enumerator: brute_force_enumerator.o
+compare_sampling: compare_sampling.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 all: $(exe)
