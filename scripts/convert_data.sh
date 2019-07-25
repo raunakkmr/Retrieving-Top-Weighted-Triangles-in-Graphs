@@ -25,4 +25,4 @@ do
     dataset=${datasets[$i]}
     ../src/cpp/convert_data ../data/${dataset}/${dataset} ../data/binaries/${dataset}
 done
-# ../src/cpp/convert_data ../data/temporal-reddit-reply.txt ../data/temporal-reddit-reply
+# ../src/cpp/convert_data ../data/temporal-reddit-reply.txt ../data/binaries/temporal-reddit-reply

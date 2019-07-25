@@ -69,6 +69,7 @@ int main(int argc, char* argv[]) {
           binary_compressed_write(out_file, e.wt);
           est_bytes += 1 + get_bytes(e.wt);
         }
+        // cerr << x << " " << y << " " << e.wt << '\n';
       }
     }
   }
