@@ -19,6 +19,8 @@ vector<weighted_triangle> read_all_triangles_vector(string filename) {
   int num_tris = reader.read(4);
   int bytes_read = 4;
 
+  cerr << "Number of triangles: " << num_tris << '\n';
+
   vector<weighted_triangle> v;
   v.reserve(num_tris);
 
@@ -43,7 +45,7 @@ vector<weighted_triangle> read_all_triangles_vector(string filename) {
 
     bytes_read += 4 + bytes[0] + bytes[1] + bytes[2] + bytes[3];
 
-    v[i] = weighted_triangle(a, b, c, w);
+    v.push_back(weighted_triangle(a, b, c, w));
   }
 
   return v;

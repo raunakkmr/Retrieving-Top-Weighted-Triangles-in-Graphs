@@ -8,7 +8,7 @@ using namespace wsdm_2019_graph;
 int main(int argc, char* argv[]) {
   ios::sync_with_stdio(0);
   cin.tie(0);
-  srand(0); 
+  srand(0);
 
   auto G = read_graph(argv[1]);
   string dataset_path = argv[2];
@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
   binary_write(out_file, n);
   binary_write(out_file, m);
 
+  // /*
   auto get_bytes = [](int x) {
     if (x <= numeric_limits<unsigned char>::max()) {
       return 0;
@@ -45,6 +46,7 @@ int main(int argc, char* argv[]) {
     }
     return -1;
   };
+  // */
 
   int est_bytes = 8;
   for (int u = 0; u < (int) G.size(); u++) {

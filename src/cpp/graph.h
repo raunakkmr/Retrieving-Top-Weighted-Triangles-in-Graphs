@@ -6,6 +6,19 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
+/*
+inline int get_bytes(int x) {
+  if (x <= numeric_limits<unsigned char>::max()) {
+    return 0;
+  } else if (x <= numeric_limits<short>::max()) {
+    return 1;
+  } else if (x <= numeric_limits<int>::max()) {
+    return 3;
+  }
+  return -1;
+}
+*/
+
 class BinaryReader {
   const static int BLENGTH = 1024 * 1024;
   char buf[2 * BLENGTH + 4];

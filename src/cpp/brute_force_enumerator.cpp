@@ -19,8 +19,9 @@ int main(int argc, char* argv[]) {
     auto all_tris = brute_force_sampler(G);
     int num_all_tris = all_tris.size();
 
+    // /*
     auto get_bytes = [](int x) {
-      if (x <= numeric_limits<char>::max()) {
+      if (x <= numeric_limits<unsigned char>::max()) {
         return 0;
       } else if (x <= numeric_limits<short>::max()) {
         return 1;
@@ -29,6 +30,7 @@ int main(int argc, char* argv[]) {
       }
       return -1;
     };
+    // */
 
     // ofstream triangle_file(dataset+"-triangles.txt");
     ofstream triangle_file(dataset+"-triangles.binary", ios::binary);

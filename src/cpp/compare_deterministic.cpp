@@ -14,39 +14,34 @@ int main(int argc, char* argv[]) {
   cin.tie(0);
   srand(0); 
 
-  auto G = read_graph(argv[1]);
-  int CHECK_TRIANGLES = atoi(argv[2]);
-  int K = atoi(argv[3]);
-  double P = atof(argv[4]);
-  double MAX_TIME = atof(argv[5]);
-  double INC = atof(argv[6]);
+  auto G = read_graph(argv[1], true);
+  string tri_file = argv[2];
+  int CHECK_TRIANGLES = atoi(argv[3]);
+  int K = atoi(argv[4]);
 
 #if PRINT_ARGS
   cerr << "=============================================" << endl;
   cerr << "ARGUMENTS" << endl;
   cerr << "=============================================" << endl;
   cerr << "Dataset: " << argv[1] << endl;
+  cerr << "Triangle File: " << argv[2] << endl;
   cerr << "K: " << K << endl;
-  cerr << "P: " << P << endl;
-  cerr << "MAX_TIME: " << MAX_TIME << endl;
-  cerr << "INC: " << INC << endl;
   cerr << endl;
 #endif
-
-  modify_weights(G, P);
 
   auto heavy_light_tri = heavy_light_sampler(G);
   auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);;
   auto auto_thresholded_tri = auto_thresholded_heavy_light(G, K);
-  
+
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
+    // auto all_tris = read_all_triangles_set(tri_file);
     cerr << "*** Comparing heavy light***" << endl;
-    compare_statistics_set(all_tris, heavy_light_tri, K);
+    compare_statistics(all_tris, heavy_light_tri, K);
     cerr << "*** Comparing adaptive heavy light***" << endl;
-    compare_statistics_set(all_tris, adaptive_heavy_light_tri, K);
+    compare_statistics(all_tris, adaptive_heavy_light_tri, K);
     cerr << "*** Comparing auto thresholded heavy light***" << endl;
-    compare_statistics_set(all_tris, auto_thresholded_tri, K);
+    compare_statistics(all_tris, auto_thresholded_tri, K);
 
     // Write out triangles to a file
     bool write_out_stats = false;

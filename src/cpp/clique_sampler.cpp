@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   int nthreads = thread::hardware_concurrency();
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
-  auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
+  // auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
   // auto wedge_sampling_tri = wedge_sampler(G, NUM_SAMPLES_WEDGE);
   // auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
   // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
     if (NUM_SAMPLES_EDGE > 0) {
       cerr << "*** Comparing edge sampling ***" << endl;
       compare_statistics(all_tris, edge_sampling_tri, K);
-      cerr << "*** Comparing parallel edge sampling ***" << endl;
-      compare_statistics_vector(all_tris, edge_sampling_tri_parallel, K);
+      // cerr << "*** Comparing parallel edge sampling ***" << endl;
+      // compare_statistics_vector(all_tris, edge_sampling_tri_parallel, K);
     }
     // if (NUM_SAMPLES_WEDGE > 0) {
     //   cerr << "*** Comparing wedge sampling ***" << endl;
