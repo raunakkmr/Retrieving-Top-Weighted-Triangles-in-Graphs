@@ -16,8 +16,8 @@ vector<weighted_triangle> read_all_triangles_vector(string filename) {
   ifstream tri_file(filename, ios::binary | ios::in);
   BinaryReader reader(tri_file);
 
-  int num_tris = reader.read(4);
-  int bytes_read = 4;
+  long long num_tris = reader.read(4);
+  size_t bytes_read = 4;
 
   cerr << "Number of triangles: " << num_tris << '\n';
 
@@ -30,9 +30,9 @@ vector<weighted_triangle> read_all_triangles_vector(string filename) {
 
     int bytes[] = {type&3, (type>>2)&3, (type>>4)&3, (type>>6)};
 
-    int a = reader.read(1+bytes[0]),
+    int a = reader.read(1+bytes[2]),
         b = reader.read(1+bytes[1]),
-        c = reader.read(1+bytes[2]);
+        c = reader.read(1+bytes[0]);
 
     int w;
     if (bytes[3] == 2) {
@@ -114,7 +114,8 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 	cerr << "=============================================" << endl;
 	cerr << "Running edge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+
+	double pre_st = clock();
 
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
@@ -139,8 +140,11 @@ set<weighted_triangle> edge_sampler(Graph& G, int nsamples) {
 		index_to_weight[count++] = kv.first;
 		prev = cumulative_weights.back();
 	}
+  cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 	cerr << "Edge weight classes: " << edge_distribution.size() << endl;
 	cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+
+  double st = clock();
 
 	auto sample_edge = [&](){
 		long long s = rand64() % cumulative_weights.back();
@@ -192,13 +196,10 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 	cerr << "=============================================" << endl;
 	cerr << "Running parallel edge sampling for triangles (" << nthreads << " threads)" << endl;
 	cerr << "=============================================" << endl;
-	struct timespec start, finish;
-	double tot_time;
-	clock_gettime(CLOCK_MONOTONIC, &start);
 
-	struct timespec start2, finish2;
-	double elapsed2;
-	clock_gettime(CLOCK_MONOTONIC, &start2);
+	struct timespec pre_start, pre_finish;
+	double pre_elapsed;
+	clock_gettime(CLOCK_MONOTONIC, &pre_start);
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
 	for (int u = 0; u < (int) G.size(); u++) {
@@ -220,19 +221,22 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 		index_to_weight[count++] = kv.first;
 		prev = cumulative_weights.back();
 	}
+	clock_gettime(CLOCK_MONOTONIC, &pre_finish);
+
+	pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
+	pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
+	cerr << "Pre-processing time: " << pre_elapsed << endl;
 	cerr << "Edge weight classes: " << edge_distribution.size() << endl;
 	cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+
+	struct timespec start, finish;
+	double tot_time;
+	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	vector<thread> threads(nthreads);
 	vector<vector<weighted_triangle>> counters(nthreads);
 	vector<set<pair<int, int>>> histories(nthreads);
 	int nsamples_per_thread = ceil(nsamples / nthreads);
-
-	clock_gettime(CLOCK_MONOTONIC, &finish2);
-
-	elapsed2 = (finish2.tv_sec - start2.tv_sec);
-	elapsed2 += (finish2.tv_nsec - start2.tv_nsec) / 1000000000.0;
-	cerr << "Pre-processing time: " << elapsed2 << endl;
 
 	auto sample_edge = [&](){
 		long long s = rand64() % cumulative_weights.back();
@@ -317,9 +321,9 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 		threads[i].join();
 	}
 
-	struct timespec start3, finish3;
-	double elapsed3;
-	clock_gettime(CLOCK_MONOTONIC, &start3);
+	struct timespec merge_start, merge_finish;
+	double merge_elapsed;
+	clock_gettime(CLOCK_MONOTONIC, &merge_start);
 
 	// Parallel merging.
 
@@ -345,16 +349,15 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 		}
 	}
 
-	clock_gettime(CLOCK_MONOTONIC, &finish3);
-	elapsed3 = (finish3.tv_sec - start3.tv_sec);
-	elapsed3 += (finish3.tv_nsec - start3.tv_nsec) / 1000000000.0;
-	cerr << "Merge time: " << elapsed3 << endl;
+	clock_gettime(CLOCK_MONOTONIC, &merge_finish);
+	merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
+	merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
+	cerr << "Merge time: " << merge_elapsed << endl;
 
 	cerr << "Found " << counters[0].size() << " triangles." << endl;
 	if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
 
 	clock_gettime(CLOCK_MONOTONIC, &finish);
-
 	tot_time = (finish.tv_sec - start.tv_sec);
 	tot_time += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
 	cerr << "Total Time (s): " << tot_time << endl;
@@ -368,8 +371,9 @@ set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {
 	cerr << "=============================================" << endl;
 	cerr << "Running wedge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
-	
+
+	double pre_st = clock();
+
 	// build sampling distribution over vertices
 	vector<long long> cumulative_weights;
 	vector<vector<long long>> vertex_cumulative_weights_1(G.size());
@@ -403,6 +407,9 @@ set<weighted_triangle> wedge_sampler(Graph& G, int nsamples) {
 			weight[u][v] = w;
 		}
 	}
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+
+  double st = clock();
 
 	auto sample_vertex = [&]() {
 		long long s = rand64() % cumulative_weights.back();
@@ -456,7 +463,9 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	cerr << "=============================================" << endl;
 	cerr << "Running path sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+
+	double pre_st = clock();
+
 	vector<full_edge> edges;
 	map<int, double> weight_sum;
 	vector<vector<long long>> node_sums(G.size());
@@ -489,6 +498,9 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 		int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
 		return edges[idx];
 	};
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+
+  double st = clock();
 
 	auto sample_neighbour = [&](int node, int exclude) {
 		int idx;
@@ -547,11 +559,14 @@ set<weighted_triangle> path_sampler(Graph& G, int nsamples) {
 	return counter;
 }
 
-pair<vector<set<weighted_triangle>>, vector<double>> edge_sampler_time(Graph &G, double max_time, double inc) {
+pair<vector<set<weighted_triangle>>, vector<double>> edge_sampler_time(Graph &G, double max_time,
+                                                                  double inc,
+                                                                  bool include_setup=true) {
 	cerr << "=============================================" << endl;
 	cerr << "Running edge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+
+	double pre_st = clock();
 
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
@@ -576,8 +591,11 @@ pair<vector<set<weighted_triangle>>, vector<double>> edge_sampler_time(Graph &G,
 		index_to_weight[count++] = kv.first;
 		prev = cumulative_weights.back();
 	}
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 	cerr << "Edge weight classes: " << edge_distribution.size() << endl;
 	cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+
+  double st = clock();
 
 	auto sample_edge = [&](){
 		long long s = rand64() % cumulative_weights.back();
@@ -596,9 +614,10 @@ pair<vector<set<weighted_triangle>>, vector<double>> edge_sampler_time(Graph &G,
 	vector<double> times;
 	int nsamples = 0;
 	double last_time = 0;
+  double init_time = include_setup? pre_st : st;
 
 	while (1) {
-		double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+		double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
 		if (tot_time >= max_time) {
 			break;
 		}
@@ -636,11 +655,14 @@ pair<vector<set<weighted_triangle>>, vector<double>> edge_sampler_time(Graph &G,
 
 }
 
-pair<vector<set<weighted_triangle>>, vector<double>> wedge_sampler_time(Graph &G, double max_time, double inc) {
+pair<vector<set<weighted_triangle>>, vector<double>> wedge_sampler_time(Graph &G, double max_time,
+                                                                        double inc,
+                                                                        bool include_setup=true) {
 	cerr << "=============================================" << endl;
 	cerr << "Running wedge sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+
+	double pre_st = clock();
 
 	// build sampling distribution over vertices
 	vector<long long> cumulative_weights;
@@ -675,6 +697,9 @@ pair<vector<set<weighted_triangle>>, vector<double>> wedge_sampler_time(Graph &G
 			weight[u][v] = w;
 		}
 	}
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+
+  double st = clock();
 
 	auto sample_vertex = [&]() {
 		long long s = rand64() % cumulative_weights.back();
@@ -704,9 +729,10 @@ pair<vector<set<weighted_triangle>>, vector<double>> wedge_sampler_time(Graph &G
 	vector<double> times;
 	int nsamples = 0;
 	double last_time = 0;
+  double init_time = include_setup? pre_st : st;
 
 	while(1) {
-		double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+		double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
 		if (tot_time >= max_time) {
 			break;
 		}
@@ -736,11 +762,14 @@ pair<vector<set<weighted_triangle>>, vector<double>> wedge_sampler_time(Graph &G
 
 }
 
-pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G, double max_time, double inc) {
+pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G, double max_time,
+                                                                       double inc,
+                                                                       bool include_setup=true) {
 	cerr << "=============================================" << endl;
 	cerr << "Running path sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
+
+	double pre_st = clock();
 
 	vector<full_edge> edges;
 	map<int, double> weight_sum;
@@ -774,6 +803,9 @@ pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G,
 		int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
 		return edges[idx];
 	};
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+
+  double st = clock();
 
 	auto sample_neighbour = [&](int node, int exclude) {
 		int idx;
@@ -798,9 +830,10 @@ pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G,
 	vector<double> times;
 	int nsamples = 0;
 	double last_time = 0;
+  double init_time = include_setup? pre_st : st;
 
 	while (1) {
-		double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+		double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
 		if (tot_time >= max_time) {
 			break;
 		}
@@ -831,11 +864,15 @@ pair<vector<set<weighted_triangle>>, vector<double>> path_sampler_time(Graph &G,
 
 }
 
+
+/*
+ * For the heavy light and adaptive based methods below, we don't include the 
+ * preprocessing time, since this can be precomputed as we read in the graph.
+ */
 set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	cerr << "=============================================" << endl;
 	cerr << "Running heavy light sampling for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
 
 	vector<full_edge> edges;
 	for (int i = 0; i < (int) G.size(); i++) {
@@ -847,6 +884,7 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	}
 	sort(edges.rbegin(), edges.rend());
 
+	double st = clock();
 	Graph Gh, Gl;
 	for (int i = 0; i < (int) (p * edges.size()); i++) {
 		Gh.resize(max(edges[i].dst+1, (int) Gh.size()));
@@ -915,8 +953,8 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 	cerr << "=============================================" << endl;
 	cerr << "Running adaptive heavy light for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
 
+	double pre_st = clock();
 	vector<full_edge> edges;
 	vector<map<int, long long>> exists(G.size());
 	for (int i = 0; i < (int) G.size(); i++) {
@@ -929,7 +967,8 @@ set<weighted_triangle> adaptive_heavy_light(Graph& G, int k = 100) {
 		}
 	}
 	sort(edges.rbegin(), edges.rend());
-
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+	double st = clock();
 	set<weighted_triangle> counter, topk;
 
 	Graph Gh;
@@ -1049,8 +1088,8 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 	cerr << "=============================================" << endl;
 	cerr << "Running auto thresholded heavy light for triangles" << endl;
 	cerr << "=============================================" << endl;
-	double st = clock();
 
+	double pre_st = clock();
 	vector<full_edge> edges;
 	vector<map<int, long long>> exists(G.size());
 	map<long long, int> edge_distribution;
@@ -1066,7 +1105,9 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 		}
 	}
 	sort(edges.rbegin(), edges.rend());
-
+	cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+	
+	double st = clock();
 	set<weighted_triangle> counter, topk;
 
 	Graph Gh;
@@ -1082,8 +1123,8 @@ set<weighted_triangle> auto_thresholded_heavy_light(Graph& G, int k = 100) {
 
 		double delta_ei = double(ei.wt - (--edge_distribution.lower_bound(ei.wt))->first) / edge_distribution[ei.wt];
 		double delta_ej = double(ej.wt - (--edge_distribution.lower_bound(ej.wt))->first) / edge_distribution[ej.wt];
-		double ei_cost = exists[ei.src].size() + exists[ei.dst].size();
-		double ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size());
+		double ei_cost = exists[ei.src].size() + exists[ei.dst].size() + 1;
+		double ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size()) + 4;
 
 		if (delta_ej / ej_cost > delta_ei / ei_cost) {
 			// Advance j, H2 and H3 cases (at least two heavy)

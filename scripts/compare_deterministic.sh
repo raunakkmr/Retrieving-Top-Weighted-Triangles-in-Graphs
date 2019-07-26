@@ -4,21 +4,17 @@ declare -a datasets=(
     coauth-MAG-Geology
     coauth-MAG-History
     congress-bills
-    DAWN
-    email-Eu
-    tags-math-sx
     tags-stack-overflow
-    threads-ask-ubuntu
     threads-math-sx
     threads-stack-overflow
 )
-make -C ../src/cpp/compare_deterministic clean
-make -C ../src/cpp/compare_deterministic
+make -C ../src/cpp clean
+make -C ../src/cpp compare_deterministic
 mkdir ../output/
-mkdir ../output/compare_deterministic
+mkdir ../output/compare_deterministic_25
 for i in "${!datasets[@]}"
 do
     dataset=${datasets[$i]}
-    ../src/cpp/compare_deterministic/clique_sampler ../data/$dataset/$dataset 1 25 1.0 0 0 &> ../output/compare_deterministic/${dataset}
+    ../src/cpp/compare_deterministic ../data/binaries/${dataset}.binary ../output/brute_force_enumerator/${dataset}-triangles.binary 1 25 &> ../output/compare_deterministic_25/${dataset}
 done
-../src/cpp/compare_deterministic/clique_sampler ../data/temporal-reddit-reply.txt 1 25 1.0 0 0 &> ../output/compare_deterministic/temporal-reddit-reply
+# ../src/cpp/compare_deterministic/clique_sampler ../data/temporal-reddit-reply.txt 1 25 1.0 0 0 &> ../output/compare_deterministic/temporal-reddit-reply

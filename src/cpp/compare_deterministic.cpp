@@ -14,6 +14,7 @@ int main(int argc, char* argv[]) {
   cin.tie(0);
   srand(0); 
 
+  // auto G = read_graph(argv[1]);
   auto G = read_graph(argv[1], true);
   string tri_file = argv[2];
   int CHECK_TRIANGLES = atoi(argv[3]);

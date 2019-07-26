@@ -11,13 +11,13 @@ int main(int argc, char* argv[]) {
     cin.tie(0);
     srand(0);
 
-    // To use binary data files, add a character after dataset.
-    // So run as ./brute_force_enumerator filename dataset {something here if we want to use binary otherwise nothing}.
+    // To use binary data files, add a character after out_path.
+    // So run as ./brute_force_enumerator filename out_path {something here if we want to use binary otherwise nothing}.
     auto G = read_graph(argv[1], argc > 3);
-    string dataset = argv[2];
+    string out_path = argv[2];
 
     auto all_tris = brute_force_sampler(G);
-    int num_all_tris = all_tris.size();
+    long long num_all_tris = all_tris.size();
 
     // /*
     auto get_bytes = [](int x) {
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     // */
 
     // ofstream triangle_file(dataset+"-triangles.txt");
-    ofstream triangle_file(dataset+"-triangles.binary", ios::binary);
+    ofstream triangle_file(out_path+"-triangles.binary", ios::binary);
     binary_write(triangle_file, num_all_tris);
     int est_bytes = 0;
     map<long long, long long> num_tris;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
     triangle_file.close();
 
     // ofstream tris_to_weight_file(dataset+"-ntris-to-weight.txt");
-    ofstream tris_to_weight_file(dataset+"-ntris-to-weight.binary", ios::binary);
+    ofstream tris_to_weight_file(out_path+"-ntris-to-weight.binary", ios::binary);
     int g_sz = G.size();
     binary_write(tris_to_weight_file, g_sz);
     for (int i = 0; i < (int) G.size(); i++) {
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
     tris_to_weight_file.close();
 
     // ofstream degree_file(dataset+"-degree-to-weight.txt");
-    ofstream degree_file(dataset+"-degree-to-weight.binary", ios::binary);
+    ofstream degree_file(out_path+"-degree-to-weight.binary", ios::binary);
     binary_write(degree_file, g_sz);
     for (int i = 0; i < (int) G.size(); i++) {
       double weight_sum = 0;

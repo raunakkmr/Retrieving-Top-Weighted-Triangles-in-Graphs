@@ -1,20 +1,10 @@
 #!/bin/bash
 declare -a datasets=(
-#     coauth-DBLP
+    coauth-DBLP
     coauth-MAG-Geology
     coauth-MAG-History
     congress-bills
-    contact-high-school
-    contact-primary-school
-    DAWN
-    email-Enron
-    email-Eu
-    NDC-classes
-    NDC-substances
-    tags-ask-ubuntu
-    tags-math-sx
     tags-stack-overflow
-    threads-ask-ubuntu
     threads-math-sx
     threads-stack-overflow
 )

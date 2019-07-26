@@ -14,10 +14,11 @@ int main(int argc, char* argv[]) {
   cin.tie(0);
   srand(0); 
 
-  auto G = read_graph(argv[1]);
-  int CHECK_TRIANGLES = atoi(argv[2]);
-  int K = atoi(argv[3]);
-  double P = atof(argv[4]);
+  // auto G = read_graph(argv[1]);
+  auto G = read_graph(argv[1], true);
+  string tri_file = argv[2];
+  int CHECK_TRIANGLES = atoi(argv[3]);
+  int K = atoi(argv[4]);
   double MAX_TIME = atof(argv[5]);
   double INC = atof(argv[6]);
 
@@ -26,14 +27,12 @@ int main(int argc, char* argv[]) {
   cerr << "ARGUMENTS" << endl;
   cerr << "=============================================" << endl;
   cerr << "Dataset: " << argv[1] << endl;
+  cerr << "Triangle File: " << argv[2] << endl;
   cerr << "K: " << K << endl;
-  cerr << "P: " << P << endl;
   cerr << "MAX_TIME: " << MAX_TIME << endl;
   cerr << "INC: " << INC << endl;
   cerr << endl;
 #endif
-
-  modify_weights(G, P);
 
   auto res = edge_sampler_time(G, MAX_TIME, INC);
   auto edge_sampling_tri = res.first;
@@ -44,9 +43,10 @@ int main(int argc, char* argv[]) {
   res = path_sampler_time(G, MAX_TIME, INC);
   auto path_sampling_tri = res.first;
   auto path_sampling_times = res.second;
-  
+
   if (CHECK_TRIANGLES) {
     auto all_tris = brute_force_sampler(G);
+    // auto all_tris = read_all_triangles_set(tri_file);
     cerr << "*** Comparing edge sampling ***" << endl;
     compare_statistics_time(all_tris, edge_sampling_tri, edge_sampling_times, K);
     cerr << "*** Comparing wedge sampling ***" << endl;
