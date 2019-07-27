@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
         return 0;
       } else if (x <= numeric_limits<short>::max()) {
         return 1;
-      } else if (x <= numeric_limits<int>::max()) {
+      } else if (x <= numeric_limits<unsigned int>::max()) {
         return 3;
       }
       return -1;
