@@ -31,14 +31,14 @@ public:
     stream.read(buf, 2 * BLENGTH);
   }
 
-  inline int read(int nbytes) {
-    int res = 0;
+  inline unsigned int read(int nbytes) {
+    unsigned int res = 0;
     if (nbytes == 1) {
       res = *reinterpret_cast<unsigned char*>(buf + curr);
     } else if (nbytes == 2) {
       res = *reinterpret_cast<short*>(buf + curr);
     } else if (nbytes == 4) {
-      res = *reinterpret_cast<int*>(buf + curr);
+      res = *reinterpret_cast<unsigned int*>(buf + curr);
     } else {
       throw "not yet implemented";
     }
@@ -82,8 +82,8 @@ inline void binary_compressed_write(std::ostream& stream, int x) {
   } else if (x <= numeric_limits<short>::max()) {
     short value = x;
     stream.write(reinterpret_cast<char*>(&value), 2);
-  } else if (x <= numeric_limits<int>::max()) {
-    int value = x;
+  } else if (x <= numeric_limits<unsigned int>::max()) {
+    unsigned int value = x;
     stream.write(reinterpret_cast<char*>(&value), 4);
   } else {
     throw "not yet implemented";
@@ -298,7 +298,7 @@ Graph read_graph(string filename, bool binary=false, bool normal_graph=false) {
       int u = reader.read(1+bytes[0]), 
           v = reader.read(1+bytes[1]);
 
-      int w;
+      unsigned int w;
       if (bytes[2] < 12) { // special case when weight is small (majority of weights)
         w = 1 + bytes[2];
         bytes[2] = -1;

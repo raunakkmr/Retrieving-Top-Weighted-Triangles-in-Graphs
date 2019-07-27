@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     int est_bytes = 0;
     map<long long, long long> num_tris;
     for (auto t : all_tris) {
-      int w = t.weight;  // TODO: change to long long.
+      unsigned int w = t.weight;  // TODO: change to long long.
       int a = get<0>(t.vertices);
       int b = get<1>(t.vertices);
       int c = get<2>(t.vertices);
