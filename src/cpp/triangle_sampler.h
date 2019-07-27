@@ -903,7 +903,7 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 	for (auto t : counter2) counter.insert(t);
 //*/
 
-///*
+/*
 	for (int i = (int) (p * edges.size()); i < (int) edges.size(); i++) {
 		int u = edges[i].src, v = edges[i].dst;
 		long long w = edges[i].wt;
@@ -919,7 +919,7 @@ set<weighted_triangle> heavy_light_sampler(Graph& G, double p = 0.1) {
 			}
 		}
 	}
-//*/
+*/
 
 /*
 	for (int i = 0; i < (int) (p * edges.size()); i++) {

@@ -247,11 +247,14 @@ degeneracy_info compute_degeneracy(Graph& G) {
 // If binary is true then filename is the path to the .binary file which
 // contains the graph in the following form: one line with the number of
 // vertices n, one line with the number of edges m, and 3m lines representing
-// edges (u, v, w).
+// edges (u, v, w). normal_graph is ignored in this case.
 // Otherwise, for the simplicial datasets filename contains the path and common
 // prefix of the datafiles. For the temporal-reddit-reply dataset filename is
-// the path to the temporal-reddit-reply.txt file.
-Graph read_graph(string filename, bool binary=false) {
+// the path to the temporal-reddit-reply.txt file. If normal_graph is true then
+// filename is the path to the file which contains the graph in the following
+// form: one line # n m, and m
+// lines representing edges u v w.
+Graph read_graph(string filename, bool binary=false, bool normal_graph=false) {
 
   // no use for the times right now
   unordered_map<int, unordered_map<int, long long>> weight;
@@ -334,6 +337,30 @@ Graph read_graph(string filename, bool binary=false) {
           weight[v][u]++;
         }
       }
+    } else if (normal_graph) {
+      ifstream edges(filename, ifstream::in);
+
+      string hash = "";
+      edges >> hash >> nnodes >> m;
+      cerr << "nodes and edges: " << nnodes << " " << m << endl;
+
+      G.resize(nnodes);
+
+      long long u, v, w;
+      long long node_id = 0;
+      for (int i = 0; i < m; i++) {
+        edges >> u >> v >> w;
+        if (!label.count(u)) {
+          label[u] = node_id++;
+        }
+        if (!label.count(v)) {
+          label[v] = node_id++;
+        }
+
+        u = label[u], v = label[v];
+        G[u].push_back({v, w});
+        G[v].push_back({u, w});
+      }
     } else {
       ifstream simplices(filename + "-simplices.txt", ifstream::in);
       ifstream nverts(filename + "-nverts.txt", ifstream::in);
@@ -373,7 +400,7 @@ Graph read_graph(string filename, bool binary=false) {
   //*/
 
   cerr << "constructing graph with " << nnodes << " nodes" << endl;
-  if (!binary) {
+  if (!binary && !normal_graph) {
     G.resize(nnodes);
     for (auto& e0 : weight) {
       for (auto& e1 : e0.second) {
