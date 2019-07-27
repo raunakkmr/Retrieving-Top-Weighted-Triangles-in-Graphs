@@ -358,8 +358,8 @@ Graph read_graph(string filename, bool binary=false, bool normal_graph=false) {
         }
 
         u = label[u], v = label[v];
-        G[u].push_back({v, w});
-        G[v].push_back({u, w});
+        G[u].push_back({(int) v, w});
+        G[v].push_back({(int) u, w});
       }
     } else {
       ifstream simplices(filename + "-simplices.txt", ifstream::in);
