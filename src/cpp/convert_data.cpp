@@ -36,19 +36,6 @@ int main(int argc, char* argv[]) {
   binary_write(out_file, n);
   binary_write(out_file, m);
 
-  // /*
-  auto get_bytes = [](int x) {
-    if (x <= numeric_limits<unsigned char>::max()) {
-      return 0;
-    } else if (x <= numeric_limits<short>::max()) {
-      return 1;
-    } else if (x <= numeric_limits<unsigned int>::max()) {
-      return 3;
-    }
-    return -1;
-  };
-  // */
-
   size_t est_bytes = 8;
   for (int u = 0; u < (int) G.size(); u++) {
     int x = label[u];

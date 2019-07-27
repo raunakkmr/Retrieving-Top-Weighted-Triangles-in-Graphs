@@ -6,18 +6,17 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
-/*
-inline int get_bytes(int x) {
+// Actually gets number of bytes minus 1 for our specialized files
+inline int get_bytes(unsigned int x) {
   if (x <= numeric_limits<unsigned char>::max()) {
     return 0;
   } else if (x <= numeric_limits<short>::max()) {
     return 1;
-  } else if (x <= numeric_limits<int>::max()) {
+  } else if (x <= numeric_limits<unsigned int>::max()) {
     return 3;
   }
   return -1;
 }
-*/
 
 class BinaryReader {
   const static int BLENGTH = 1024 * 1024;
@@ -31,14 +30,16 @@ public:
     stream.read(buf, 2 * BLENGTH);
   }
 
-  inline unsigned int read(int nbytes) {
-    unsigned int res = 0;
+  inline long long read(int nbytes) {
+    long long res = 0;
     if (nbytes == 1) {
       res = *reinterpret_cast<unsigned char*>(buf + curr);
     } else if (nbytes == 2) {
       res = *reinterpret_cast<short*>(buf + curr);
     } else if (nbytes == 4) {
       res = *reinterpret_cast<unsigned int*>(buf + curr);
+    } else if (nbytes == 8) {
+      res = *reinterpret_cast<long long*>(buf + curr);
     } else {
       throw "not yet implemented";
     }
@@ -75,7 +76,7 @@ void binary_write(std::ostream& stream, T value){
   stream.write(reinterpret_cast<char*>(&value), sizeof(T));
 }
 
-inline void binary_compressed_write(std::ostream& stream, int x) {
+inline void binary_compressed_write(std::ostream& stream, unsigned int x) {
   if (x <= numeric_limits<unsigned char>::max()) {
     unsigned char value = x;
     stream.write(reinterpret_cast<char*>(&value), 1);

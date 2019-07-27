@@ -19,23 +19,10 @@ int main(int argc, char* argv[]) {
     auto all_tris = brute_force_sampler(G);
     long long num_all_tris = all_tris.size();
 
-    // /*
-    auto get_bytes = [](int x) {
-      if (x <= numeric_limits<unsigned char>::max()) {
-        return 0;
-      } else if (x <= numeric_limits<short>::max()) {
-        return 1;
-      } else if (x <= numeric_limits<unsigned int>::max()) {
-        return 3;
-      }
-      return -1;
-    };
-    // */
-
     // ofstream triangle_file(dataset+"-triangles.txt");
-    ofstream triangle_file(out_path+"-triangles.binary", ios::binary);
+    ofstream triangle_file(out_path+"-triangles.binary", ios::binary | ios::out);
     binary_write(triangle_file, num_all_tris);
-    int est_bytes = 0;
+    int est_bytes = 8;
     map<long long, long long> num_tris;
     for (auto t : all_tris) {
       unsigned int w = t.weight;  // TODO: change to long long.
