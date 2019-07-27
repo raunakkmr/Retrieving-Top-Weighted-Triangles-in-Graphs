@@ -16,20 +16,20 @@ int main(int argc, char* argv[]) {
   cin.tie(0);
   srand(0); 
 
-  auto G = read_graph(argv[1]);
+  auto G = read_graph(argv[1], true);
   int NUM_SAMPLES_EDGE = atoi(argv[2]);
-  int NUM_SAMPLES_WEDGE = atoi(argv[3]);
-  int NUM_SAMPLES_PATH = atoi(argv[4]);
-  int CHECK_TRIANGLES = atoi(argv[5]);
-  int K = atoi(argv[6]);
-  double P = atof(argv[7]);
+  // int NUM_SAMPLES_WEDGE = atoi(argv[3]);
+  // int NUM_SAMPLES_PATH = atoi(argv[4]);
+  // int CHECK_TRIANGLES = atoi(argv[5]);
+  // int K = atoi(argv[6]);
+  // double P = atof(argv[7]);
   // Since we are focusing on triangles for now, I am setting these to 0
   // manually to make it easier to specify arguments on the command line. We
   // should make the command line interface nicer at some point.
-  // int CLIQUE_SIZE = atoi(argv[7]);
-  // int NUM_SAMPLES_CLIQUE = atoi(argv[8]);
-  int CLIQUE_SIZE = 0;
-  int NUM_SAMPLES_CLIQUE = 0;
+  int CLIQUE_SIZE = atoi(argv[3]);
+  int NUM_SAMPLES_CLIQUE = atoi(argv[4]);
+  //int CLIQUE_SIZE = 0;
+  // int NUM_SAMPLES_CLIQUE = 0;
 
 #if PRINT_ARGS
   cerr << "=============================================" << endl;
@@ -37,10 +37,11 @@ int main(int argc, char* argv[]) {
   cerr << "=============================================" << endl;
   cerr << "Dataset: " << argv[1] << endl;
   cerr << "NUM_SAMPLES_EDGE: " << NUM_SAMPLES_EDGE << endl;
-  cerr << "NUM_SAMPLES_PATH: " << NUM_SAMPLES_PATH << endl;
-  cerr << "K: " << K << endl;
-  cerr << "P: " << P << endl;
-  cerr << endl;
+  cerr << "CLIQUE_SIZE, NSAMPS: " << CLIQUE_SIZE << " " << NUM_SAMPLES_CLIQUE << endl;
+  // cerr << "NUM_SAMPLES_PATH: " << NUM_SAMPLES_PATH << endl;
+  // cerr << "K: " << K << endl;
+  // cerr << "P: " << P << endl;
+  // cerr << endl;
 #endif
 
 #if PRINT_STATISTICS
@@ -64,9 +65,7 @@ int main(int argc, char* argv[]) {
   cerr << endl;
 #endif
 
-  modify_weights(G, P);
-
-  int nthreads = thread::hardware_concurrency();
+  //int nthreads = thread::hardware_concurrency();
 
   auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
   // auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
@@ -75,66 +74,6 @@ int main(int argc, char* argv[]) {
   // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
   // auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
   // auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(G, K);
-  
-  if (CHECK_TRIANGLES) {
-    auto all_tris = brute_force_sampler(G);
-    if (NUM_SAMPLES_EDGE > 0) {
-      cerr << "*** Comparing edge sampling ***" << endl;
-      compare_statistics(all_tris, edge_sampling_tri, K);
-      // cerr << "*** Comparing parallel edge sampling ***" << endl;
-      // compare_statistics_vector(all_tris, edge_sampling_tri_parallel, K);
-    }
-    // if (NUM_SAMPLES_WEDGE > 0) {
-    //   cerr << "*** Comparing wedge sampling ***" << endl;
-    //   compare_statistics(all_tris, wedge_sampling_tri, K);
-    // }
-    // if (NUM_SAMPLES_PATH > 0) {
-    //   cerr << "*** Comparing path sampling ***" << endl;
-    //   compare_statistics(all_tris, path_sampling_tri, K);
-    // }
-    // cerr << "*** Comparing heavy light sampling ***" << endl;
-    // compare_statistics(all_tris, heavy_light_sampling_tri, K);
-    // cerr << "*** Comparing adaptive heavy light ***" << endl;
-    // compare_statistics(all_tris, adaptive_heavy_light_tri, K);
-    // cerr << "*** Comparing auto thresholded heavy light ***" << endl;
-    // compare_statistics(all_tris, auto_thresholded_heavy_light_tri, K);
-
-    // Write out triangles to a file
-    bool write_out_stats = false;
-    if (write_out_stats) {
-      ofstream triangle_file("triangles.txt");
-      map<int, int> num_tris;
-      for (auto t : all_tris) {
-        triangle_file << t.weight << '\n';
-        num_tris[get<0>(t.vertices)]++;
-        num_tris[get<1>(t.vertices)]++;
-        num_tris[get<2>(t.vertices)]++;
-      }
-      triangle_file.close();
-
-      ofstream tris_to_weight_file("ntris-to-weight.txt");
-      for (int i = 0; i < (int) G[i].size(); i++) {
-        double weight_sum = 0;
-        for (auto e : G[i]) {
-          weight_sum += e.wt;
-        }
-        tris_to_weight_file << weight_sum << " " << num_tris[i] << '\n';
-      }
-      tris_to_weight_file.close();
-
-      ofstream degree_file("degree-to-weight.txt");
-      for (int i = 0; i < (int) G[i].size(); i++) {
-        double weight_sum = 0;
-        for (auto e : G[i]) {
-          weight_sum += e.wt;
-        }
-        degree_file << G[i].size() << " " << weight_sum << '\n';
-      }
-      degree_file.close();
-    }
-  } else {
-    cerr << "Skipping brute force triangle computations since it seems to be infeasible..." << endl; 
-  }
   
   if (CLIQUE_SIZE > 1) {
     auto sampled_cliques = clique_sampler(G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);

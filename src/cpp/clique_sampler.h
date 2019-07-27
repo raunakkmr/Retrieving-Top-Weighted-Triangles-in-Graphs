@@ -172,7 +172,8 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 
 	// build distribution over edges
 	map<int, vector<full_edge>> edge_distribution;
-	map<int, map<int, long long>> adjmat;
+	vector<map<int, long long>> adjmat(G.size());
+	int nedges = 0;
 	for (int u = 0; u < (int) G.size(); u++) {
 		if (removed[u]) continue;
 		for (auto e : G[u]) {
@@ -182,11 +183,12 @@ set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
 			if (removed[v]) continue;
 			edge_distribution[e.wt].push_back({u, v, w});
 			adjmat[u][v] = adjmat[v][u] = w;
+			nedges++;
 		}
 	}
 
 	vector<long long> cumulative_weights;
-	map<int, long long> index_to_weight;
+	vector<long long> index_to_weight(nedges);
 	int count = 0;
 	long long prev = 0;
 	// todo: replace this with p means
