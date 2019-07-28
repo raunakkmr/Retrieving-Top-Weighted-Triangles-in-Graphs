@@ -282,31 +282,31 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 		while (a < Li && b < Lj) {
 			if (counters[i][a] < counters[j][b]) {
 				if (counters[i][a] != W.back()) {
-					W.push_back(counters[i][a]);
+					W.push_back(move(counters[i][a]));
 				}
 				a++;
 			} else if (counters[i][a] == counters[j][b]) {
 				if (counters[i][a] != W.back()) {
-					W.push_back(counters[i][a]);
+					W.push_back(move(counters[i][a]));
 				}
 				a++;
 				b++;
 			} else {
 				if (counters[j][b] != W.back()) {
-					W.push_back(counters[j][b]);
+					W.push_back(move(counters[j][b]));
 				}
 				b++;
 			}
 		}
 		while (a < Li) {
 			if (counters[i][a] != W.back()) {
-				W.push_back(counters[i][a]);
+				W.push_back(move(counters[i][a]));
 			}
 			a++;
 		}
 		while (b < Lj) {
 			if (counters[j][b] != W.back()) {
-				W.push_back(counters[j][b]);
+				W.push_back(move(counters[j][b]));
 			}
 			b++;
 		}
@@ -327,10 +327,11 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 
 	// Parallel merging.
 
-	// int pow2_sz = 1;
-	// while (pow2_sz < nthreads) pow2_sz *= 2;;
-
-	int pow2_sz = (int) ceil(log2(nthreads));
+	int pow2_sz = 1, log2_sz = 0;
+	while (pow2_sz < nthreads) {
+		pow2_sz *= 2;
+		log2_sz++;
+	}
 
 	for (int i = counters.size(); i < pow2_sz; i++) {
 		counters.push_back(vector<weighted_triangle>());
@@ -338,7 +339,7 @@ vector<weighted_triangle> edge_sampler_parallel(Graph &G, int nsamples, int nthr
 
 	vector<thread> merge_threads(pow2_sz);
 	int val = 1;
-	for (int level = 1; level < pow2_sz+1; level++) {
+	for (int level = 1; level < log2_sz+1; level++) {
 		val *= 2;
 		for (int i = 0; i < (int) counters.size()/val; i++) {
 			thread merge_th(parallel_merger, i*val, i*val+(int)val/2);

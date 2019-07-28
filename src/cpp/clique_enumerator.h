@@ -315,156 +315,164 @@ void mkspecial(specialsparse *g, unsigned char k){
 }
 
 
-// TODO: Maybe this is premature optimization to lift these two parameters
-// out of function call. Profile again with these within function
-map<int, map<int, int>>* _adjmat;
-vector<weighted_clique>* _clique_list;
-void add_vertex(weighted_clique& C, int u) {
-	C.vertices.push_back(u);
-	for (int w : C.vertices) {
-		C.weight += (*_adjmat)[w][u];
+struct clique_enumerator {
+	// TODO: Maybe this is premature optimization to lift these two parameters
+	// out of function call. Profile again with these within function
+	map<int, map<int, int>>* _adjmat;
+	vector<weighted_clique>* _clique_list;
+	void add_vertex(weighted_clique& C, int u) {
+		C.vertices.push_back(u);
+		for (int w : C.vertices) {
+			C.weight += (*_adjmat)[w][u];
+		}
 	}
-}
-void remove_last(weighted_clique& C) {
-	int u = C.vertices.back();
-	C.vertices.pop_back();
-	for (int w : C.vertices) {
-		C.weight -= (*_adjmat)[w][u];
+	void remove_last(weighted_clique& C) {
+		int u = C.vertices.back();
+		C.vertices.pop_back();
+		for (int w : C.vertices) {
+			C.weight -= (*_adjmat)[w][u];
+		}
 	}
-}
-void kclique(unsigned l, specialsparse *g, unsigned long long *n, weighted_clique& C) {
-	unsigned i,j,k,end,u,v,w;
+	void kclique(unsigned l, specialsparse *g, unsigned long long *n, weighted_clique& C) {
+		unsigned i,j,k,end,u,v,w;
 
-	if(l==2){
-		for(i=0; i<g->ns[2]; i++){//list all edges
-			u=g->sub[2][i];
-			add_vertex(C, u);
-			//(*n)+=g->d[2][u];
-			end=g->cd[u]+g->d[2][u];
-			for (j=g->cd[u];j<end;j++) {
-				v=g->adj[j];
+		if(l==2){
+			for(i=0; i<g->ns[2]; i++){//list all edges
+				u=g->sub[2][i];
+				add_vertex(C, u);
+				//(*n)+=g->d[2][u];
+				end=g->cd[u]+g->d[2][u];
+				for (j=g->cd[u];j<end;j++) {
+					v=g->adj[j];
 
-				add_vertex(C, v);
-				_clique_list->push_back(C);
+					add_vertex(C, v);
+					_clique_list->push_back(C);
+					remove_last(C);
+					(*n)++;//listing here!!!  // NOTE THAT WE COULD DO (*n)+=g->d[2][u] to be much faster (for counting only); !!!!!!!!!!!!!!!!!!
+				}
 				remove_last(C);
-				(*n)++;//listing here!!!  // NOTE THAT WE COULD DO (*n)+=g->d[2][u] to be much faster (for counting only); !!!!!!!!!!!!!!!!!!
 			}
+
+			return;
+		}
+
+		for(i=0; i<g->ns[l]; i++){
+			u=g->sub[l][i];
+			//printf("%u %u\n",i,u);
+			g->ns[l-1]=0;
+			end=g->cd[u]+g->d[l][u];
+			for (j=g->cd[u];j<end;j++){//relabeling nodes and forming U'.
+				v=g->adj[j];
+				if (g->lab[v]==l){
+					g->lab[v]=l-1;
+					g->sub[l-1][g->ns[l-1]++]=v;
+					g->d[l-1][v]=0;//new degrees
+				}
+			}
+			for (j=0;j<g->ns[l-1];j++){//reodering adjacency list and computing new degrees
+				v=g->sub[l-1][j];
+				end=g->cd[v]+g->d[l][v];
+				for (k=g->cd[v];k<end;k++){
+					w=g->adj[k];
+					if (g->lab[w]==l-1){
+						g->d[l-1][v]++;
+					}
+					else{
+						g->adj[k--]=g->adj[--end];
+						g->adj[end]=w;
+					}
+				}
+			}
+
+			add_vertex(C, u);
+			kclique(l-1, g, n, C);
 			remove_last(C);
-		}
 
-		return;
+			for (j=0;j<g->ns[l-1];j++){//restoring labels
+				v=g->sub[l-1][j];
+				g->lab[v]=l;
+			}
+
+		}
 	}
 
-	for(i=0; i<g->ns[l]; i++){
-		u=g->sub[l][i];
-		//printf("%u %u\n",i,u);
-		g->ns[l-1]=0;
-		end=g->cd[u]+g->d[l][u];
-		for (j=g->cd[u];j<end;j++){//relabeling nodes and forming U'.
-			v=g->adj[j];
-			if (g->lab[v]==l){
-				g->lab[v]=l-1;
-				g->sub[l-1][g->ns[l-1]++]=v;
-				g->d[l-1][v]=0;//new degrees
-			}
-		}
-		for (j=0;j<g->ns[l-1];j++){//reodering adjacency list and computing new degrees
-			v=g->sub[l-1][j];
-			end=g->cd[v]+g->d[l][v];
-			for (k=g->cd[v];k<end;k++){
-				w=g->adj[k];
-				if (g->lab[w]==l-1){
-					g->d[l-1][v]++;
-				}
-				else{
-					g->adj[k--]=g->adj[--end];
-					g->adj[end]=w;
+
+	vector<weighted_clique> find_cliques(Graph& G, int k, bool print_diagnostic = false){
+		specialsparse* g;
+		unsigned long long n;
+
+		time_t t0,t1,t2;
+		t1=time(NULL);
+		t0=t1;
+
+		map<int, map<int, int>> adjmat;
+		vector<full_edge> edgelist;
+		for (int i = 0; i < (int) G.size(); i++) {
+			for (auto e : G[i]) {
+				if (i < e.dst) {
+					edgelist.push_back({i, e.dst, e.wt});
+					adjmat[i][e.dst] = e.wt;
+					adjmat[e.dst][i] = e.wt;
 				}
 			}
 		}
 
-		add_vertex(C, u);
-		kclique(l-1, g, n, C);
-		remove_last(C);
+		g=readedgelist(edgelist);
+		if (print_diagnostic) {
+			printf("Number of nodes = %u\n",g->n);
+			printf("Number of edges = %u\n",g->e);
 
-		for (j=0;j<g->ns[l-1];j++){//restoring labels
-			v=g->sub[l-1][j];
-			g->lab[v]=l;
+			t2=time(NULL);
+			printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
+			t1=t2;
+
+			printf("Building the graph structure\n");
 		}
+		ord_core(g);
+		relabel(g);
 
+		mkspecial(g,k);
+
+		if (print_diagnostic) {
+			printf("Number of nodes = %u\n",g->n);
+			printf("Number of edges = %u\n",g->e);
+
+			t2=time(NULL);
+			printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
+			t1=t2;
+
+			printf("Iterate over all cliques\n");
+		}
+		vector<weighted_clique> retval;
+		_clique_list = &retval;
+		_adjmat = &adjmat;
+		weighted_clique C;
+		n=0;
+		kclique(k, g, &n, C);
+		_clique_list = nullptr;
+		_adjmat = nullptr;
+
+		if (print_diagnostic) {
+			printf("Number of %u-cliques: %llu\n",k,n);
+
+			t2=time(NULL);
+			printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
+			t1=t2;
+		}
+		freespecialsparse(g,k);
+
+		if (print_diagnostic) {
+			printf("- Overall time = %ldh%ldm%lds\n",(t2-t0)/3600,((t2-t0)%3600)/60,((t2-t0)%60));
+		}
+		return retval;
 	}
+};
+
+vector<weighted_clique> find_cliques(Graph& G, int k) {
+	clique_enumerator ce;
+	return ce.find_cliques(G, k);
 }
 
-
-set<weighted_clique> find_cliques(Graph& G, int k, bool print_diagnostic = false){
-	specialsparse* g;
-	unsigned long long n;
-
-	time_t t0,t1,t2;
-	t1=time(NULL);
-	t0=t1;
-
-	map<int, map<int, int>> adjmat;
-	vector<full_edge> edgelist;
-	for (int i = 0; i < (int) G.size(); i++) {
-		for (auto e : G[i]) {
-			if (i < e.dst) {
-				edgelist.push_back({i, e.dst, e.wt});
-				adjmat[i][e.dst] = e.wt;
-				adjmat[e.dst][i] = e.wt;
-			}
-		}
-	}
-
-	g=readedgelist(edgelist);
-	if (print_diagnostic) {
-		printf("Number of nodes = %u\n",g->n);
-		printf("Number of edges = %u\n",g->e);
-
-		t2=time(NULL);
-		printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
-		t1=t2;
-
-		printf("Building the graph structure\n");
-	}
-	ord_core(g);
-	relabel(g);
-
-	mkspecial(g,k);
-
-	if (print_diagnostic) {
-		printf("Number of nodes = %u\n",g->n);
-		printf("Number of edges = %u\n",g->e);
-
-		t2=time(NULL);
-		printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
-		t1=t2;
-
-		printf("Iterate over all cliques\n");
-	}
-	vector<weighted_clique> retval;
-	_clique_list = &retval;
-	_adjmat = &adjmat;
-	weighted_clique C;
-	n=0;
-	kclique(k, g, &n, C);
-	_clique_list = nullptr;
-	_adjmat = nullptr;
-
-	if (print_diagnostic) {
-		printf("Number of %u-cliques: %llu\n",k,n);
-
-		t2=time(NULL);
-		printf("- Time = %ldh%ldm%lds\n",(t2-t1)/3600,((t2-t1)%3600)/60,((t2-t1)%60));
-		t1=t2;
-	}
-	freespecialsparse(g,k);
-
-	if (print_diagnostic) {
-		printf("- Overall time = %ldh%ldm%lds\n",(t2-t0)/3600,((t2-t0)%3600)/60,((t2-t0)%60));
-	}
-	return set<weighted_clique>(retval.begin(), retval.end());
-}
 
 }
 

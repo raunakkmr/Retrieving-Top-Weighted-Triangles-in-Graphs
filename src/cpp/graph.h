@@ -124,6 +124,20 @@ struct weighted_triangle {
     vertices = make_tuple(verts[0], verts[1], verts[2]);
     weight = wt;
   }
+  weighted_triangle() {
+    weight = 0;
+  }
+  weighted_triangle(const weighted_triangle& t) :
+    vertices(t.vertices), weight(t.weight) {
+  }
+  weighted_triangle(weighted_triangle&& t) noexcept : 
+    vertices(move(t.vertices)), weight(t.weight) { 
+  }
+  weighted_triangle& operator=(weighted_triangle&& t) {
+    vertices = move(t.vertices);
+    weight = t.weight;
+    return *this;
+  }
 
   inline const bool operator<(const weighted_triangle& o) const {
     if (weight != o.weight) return weight > o.weight;
@@ -155,10 +169,29 @@ struct weighted_clique {
   weighted_clique() {
     weight = 0;
   };
+  weighted_clique(const weighted_clique& wc) : 
+    vertices(wc.vertices), weight(wc.weight) {
+  }
+  weighted_clique(weighted_clique&& wc) noexcept : 
+    vertices(move(wc.vertices)), weight(wc.weight) { 
+  }
+  weighted_clique& operator=(weighted_clique&& wc) {
+    vertices = move(wc.vertices);
+    weight = wc.weight;
+    return *this;
+  }
 
-  const bool operator<(const weighted_clique& o) const {
+  inline const bool operator<(const weighted_clique& o) const {
     if (weight != o.weight) return weight > o.weight;
     return vertices < o.vertices;
+  }
+
+  inline const bool operator==(const weighted_clique& o) const {
+    return (weight == o.weight && vertices == o.vertices);
+  }
+
+  inline const bool operator!=(const weighted_clique& o) const {
+    return (weight != o.weight || vertices != o.vertices);
   }
 
   friend ostream& operator<<(ostream& stream, const weighted_clique& t) {
