@@ -25,33 +25,33 @@ int main(int argc, char* argv[]) {
     int est_bytes = 8;
     map<long long, long long> num_tris;
     for (auto t : all_tris) {
-      unsigned int w = t.weight;  // TODO: change to long long.
-      int a = get<0>(t.vertices);
-      int b = get<1>(t.vertices);
-      int c = get<2>(t.vertices);
-      int bytes = 0;
-      // uses 2 as a special code that the weight is 3.
-      bytes |= (w == 3 ? 2 : get_bytes(w));
-      bytes <<= 2;
-      bytes |= get_bytes(a);
-      bytes <<= 2;
-      bytes |= get_bytes(b);
-      bytes <<= 2;
-      bytes |= get_bytes(c);
+        unsigned int w = t.weight;  // TODO: change to long long.
+        int a = get<0>(t.vertices);
+        int b = get<1>(t.vertices);
+        int c = get<2>(t.vertices);
+        int bytes = 0;
+        // uses 2 as a special code that the weight is 3.
+        bytes |= (w == 3 ? 2 : get_bytes(w));
+        bytes <<= 2;
+        bytes |= get_bytes(a);
+        bytes <<= 2;
+        bytes |= get_bytes(b);
+        bytes <<= 2;
+        bytes |= get_bytes(c);
 
-      binary_compressed_write(triangle_file, bytes);
-      binary_compressed_write(triangle_file, a);
-      binary_compressed_write(triangle_file, b);
-      binary_compressed_write(triangle_file, c);
-      est_bytes += 4 + get_bytes(a) + get_bytes(b) + get_bytes(c);
-      if (w > 3) {
-        binary_compressed_write(triangle_file, w);
-        est_bytes += 1 + get_bytes(w);
-      }
+        binary_compressed_write(triangle_file, bytes);
+        binary_compressed_write(triangle_file, a);
+        binary_compressed_write(triangle_file, b);
+        binary_compressed_write(triangle_file, c);
+        est_bytes += 4 + get_bytes(a) + get_bytes(b) + get_bytes(c);
+        if (w > 3) {
+            binary_compressed_write(triangle_file, w);
+            est_bytes += 1 + get_bytes(w);
+        }
 
-      num_tris[get<0>(t.vertices)]++;
-      num_tris[get<1>(t.vertices)]++;
-      num_tris[get<2>(t.vertices)]++;
+        num_tris[get<0>(t.vertices)]++;
+        num_tris[get<1>(t.vertices)]++;
+        num_tris[get<2>(t.vertices)]++;
     }
     triangle_file.close();
 
@@ -60,13 +60,13 @@ int main(int argc, char* argv[]) {
     int g_sz = G.size();
     binary_write(tris_to_weight_file, g_sz);
     for (int i = 0; i < (int) G.size(); i++) {
-      double weight_sum = 0;
-      for (auto e : G[i]) {
-        weight_sum += e.wt;
-      }
-      // tris_to_weight_file << weight_sum << " " << num_tris[i] << '\n';
-      binary_write(tris_to_weight_file, weight_sum);
-      binary_write(tris_to_weight_file, num_tris[i]);
+        double weight_sum = 0;
+        for (auto e : G[i]) {
+            weight_sum += e.wt;
+        }
+        // tris_to_weight_file << weight_sum << " " << num_tris[i] << '\n';
+        binary_write(tris_to_weight_file, weight_sum);
+        binary_write(tris_to_weight_file, num_tris[i]);
     }
     tris_to_weight_file.close();
 
@@ -74,14 +74,14 @@ int main(int argc, char* argv[]) {
     ofstream degree_file(out_path+"-degree-to-weight.binary", ios::binary);
     binary_write(degree_file, g_sz);
     for (int i = 0; i < (int) G.size(); i++) {
-      double weight_sum = 0;
-      for (auto e : G[i]) {
-        weight_sum += e.wt;
-      }
-      // degree_file << G[i].size() << " " << weight_sum << '\n';
-      int gi_sz = G[i].size();
-      binary_write(degree_file, gi_sz);
-      binary_write(degree_file, weight_sum);
+        double weight_sum = 0;
+        for (auto e : G[i]) {
+            weight_sum += e.wt;
+        }
+        // degree_file << G[i].size() << " " << weight_sum << '\n';
+        int gi_sz = G[i].size();
+        binary_write(degree_file, gi_sz);
+        binary_write(degree_file, weight_sum);
     }
     degree_file.close();
 
