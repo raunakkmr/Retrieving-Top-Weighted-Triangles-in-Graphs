@@ -400,7 +400,8 @@ namespace wsdm_2019_graph {
 
         // build an adjacency matrix where a(i, j) = weight of edge (i, j)
         // TODO: maybe we should lift this out of the functions and make a more general graph structure
-        map<int, map<int, long long>> weight;
+        // map<int, map<int, long long>> weight;
+        vector<unordered_map<int, long long>> weight(G.size());
         for (int u = 0; u < (int) G.size(); u++) {
             for (const auto &e : G[u]) {
                 int v = e.dst;
@@ -468,7 +469,8 @@ namespace wsdm_2019_graph {
         double pre_st = clock();
 
         vector<full_edge> edges;
-        map<int, double> weight_sum;
+        // map<int, double> weight_sum;
+        vector<double> weight_sum(G.size());
         vector<vector<long long>> node_sums(G.size());
         for (int u = 0; u < (int) G.size(); u++) {
             sort(G[u].begin(), G[u].end());
@@ -690,7 +692,8 @@ namespace wsdm_2019_graph {
 
         // build an adjacency matrix where a(i, j) = weight of edge (i, j)
         // TODO: maybe we should lift this out of the functions and make a more general graph structure
-        map<int, map<int, long long>> weight;
+        // map<int, map<int, long long>> weight;
+        vector<unordered_map<int, long long>> weight(G.size());
         for (int u = 0; u < (int) G.size(); u++) {
             for (const auto &e : G[u]) {
                 int v = e.dst;
@@ -773,7 +776,8 @@ namespace wsdm_2019_graph {
         double pre_st = clock();
 
         vector<full_edge> edges;
-        map<int, double> weight_sum;
+        // map<int, double> weight_sum;
+        vector<double> weight_sum(G.size());
         vector<vector<long long>> node_sums(G.size());
         for (int u = 0; u < (int) G.size(); u++) {
             sort(G[u].begin(), G[u].end());
@@ -962,7 +966,8 @@ namespace wsdm_2019_graph {
 
         double pre_st = clock();
         vector<full_edge> edges;
-        vector<map<int, long long>> exists(G.size());
+        // changed
+        vector<unordered_map<int, long long>> exists(G.size());
         for (int i = 0; i < (int) G.size(); i++) {
             for (auto e : G[i]) {
                 if (i < e.dst) {
@@ -1100,7 +1105,8 @@ namespace wsdm_2019_graph {
 
         double pre_st = clock();
         vector<full_edge> edges;
-        vector<map<int, long long>> exists(G.size());
+        // changed
+        vector<unordered_map<int, long long>> exists(G.size());
         map<long long, int> edge_distribution;
         edge_distribution[0] = 1; // Assuming positive weight edges
         for (int i = 0; i < (int) G.size(); i++) {
