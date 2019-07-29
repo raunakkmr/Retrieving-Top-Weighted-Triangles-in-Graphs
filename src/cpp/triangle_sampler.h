@@ -875,6 +875,7 @@ namespace wsdm_2019_graph {
         cerr << "Running heavy light sampling for triangles" << endl;
         cerr << "=============================================" << endl;
 
+        double pre_st = clock();
         vector<full_edge> edges;
         for (int i = 0; i < (int) G.size(); i++) {
             for (auto e : G[i]) {
@@ -883,7 +884,11 @@ namespace wsdm_2019_graph {
                 }
             }
         }
+        cerr << "Loop time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+        double sort_st = clock();
         sort(edges.rbegin(), edges.rend());
+        cerr << "Sort time (s): " << 1.0 * (clock() - sort_st)/CLOCKS_PER_SEC << endl;
+        cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 
         double st = clock();
         Graph Gh, Gl;
@@ -967,7 +972,10 @@ namespace wsdm_2019_graph {
                 exists[e.dst][i] = e.wt;
             }
         }
+        cerr << "Loop time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+        double sort_st = clock();
         sort(edges.rbegin(), edges.rend());
+        cerr << "Sort time (s): " << 1.0 * (clock() - sort_st)/CLOCKS_PER_SEC << endl;
         cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
         double st = clock();
         set<weighted_triangle> counter, topk;
@@ -1105,7 +1113,10 @@ namespace wsdm_2019_graph {
                 exists[e.dst][i] = e.wt;
             }
         }
+        cerr << "Loop time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+        double sort_st = clock();
         sort(edges.rbegin(), edges.rend());
+        cerr << "Sort time (s): " << 1.0 * (clock() - sort_st)/CLOCKS_PER_SEC << endl;
         cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 
         double st = clock();
