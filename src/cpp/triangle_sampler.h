@@ -1572,13 +1572,6 @@ namespace wsdm_2019_graph {
         reverse(edge_distribution.begin(), edge_distribution.end());
         cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 
-        for (int i = 1; i < edge_distribution.size(); i++) {
-          assert(edge_distribution[i-1].first < edge_distribution[i].first);
-        }
-        // for (const auto &x : edge_distribution) {
-        //     assert(edge_distribution[x.first] == x.second);
-        // }
-
         double st = clock();
         set<weighted_triangle> counter, topk;
 
