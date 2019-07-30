@@ -99,6 +99,7 @@ namespace wsdm_2019_graph {
     struct full_edge {
         int src, dst;
         long long wt;
+        full_edge(int s, int d, long long w) : src(s), dst(d), wt(w) {}
         inline bool operator<(const full_edge& o) const {
             if (o.wt != wt) return wt < o.wt;
             return make_pair(src, dst) < make_pair(o.src, o.dst);

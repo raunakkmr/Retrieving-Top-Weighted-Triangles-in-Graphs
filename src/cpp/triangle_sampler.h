@@ -1539,6 +1539,7 @@ namespace wsdm_2019_graph {
         vector<full_edge> &edges = GS.edges;
         vector<set<int>> deletions(G.size());
         vector<unordered_map<int, long long>> exists(G.size());
+        /*
         map<long long, int> edge_distribution;
         edge_distribution[0] = 1; // Assuming positive weight edges
         for (int i = 0; i < (int) G.size(); i++) {
@@ -1553,6 +1554,30 @@ namespace wsdm_2019_graph {
             }
         }
         cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+        */
+
+        vector<pair<long long, int>> edge_distribution;
+        long long prev = edges[0].wt; int cnt = 1;
+        for (int i = 1; i < (int) edges.size(); i++) {
+          long long cur = edges[i].wt;
+          if (prev == cur) {
+            cnt++;
+          } else {
+            edge_distribution.push_back({prev, cnt});
+            prev = cur;
+            cnt = 1;
+          }
+        }
+        edge_distribution.push_back({0, 1});
+        reverse(edge_distribution.begin(), edge_distribution.end());
+        cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+
+        for (int i = 1; i < edge_distribution.size(); i++) {
+          assert(edge_distribution[i-1].first < edge_distribution[i].first);
+        }
+        // for (const auto &x : edge_distribution) {
+        //     assert(edge_distribution[x.first] == x.second);
+        // }
 
         double st = clock();
         set<weighted_triangle> counter, topk;
@@ -1567,8 +1592,8 @@ namespace wsdm_2019_graph {
             auto ei = edges[hi], ej = edges[hj];
             Gh.resize(max(ej.dst+1, (int) Gh.size()));
 
-            double delta_ei = double(ei.wt - (--edge_distribution.lower_bound(ei.wt))->first) / edge_distribution[ei.wt];
-            double delta_ej = double(ej.wt - (--edge_distribution.lower_bound(ej.wt))->first) / edge_distribution[ej.wt];
+            // double delta_ei = double(ei.wt - (--edge_distribution.lower_bound(ei.wt))->first) / edge_distribution[ei.wt];
+            // double delta_ej = double(ej.wt - (--edge_distribution.lower_bound(ej.wt))->first) / edge_distribution[ej.wt];
             double ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size()) + 4;
             double ei_cost = 0;
             if (use_map) {
@@ -1576,6 +1601,15 @@ namespace wsdm_2019_graph {
             } else {
                 ei_cost = G[ei.src].size() + G[ei.dst].size() + 1;
             }
+
+            auto it = lower_bound(edge_distribution.begin(), edge_distribution.end(), make_pair(ei.wt, -1));
+            int denom = it->second;
+            --it;
+            double delta_ei = double(ei.wt - it->first) / denom;
+            it = lower_bound(edge_distribution.begin(), edge_distribution.end(), make_pair(ej.wt, -1));
+            denom = it->second;
+            --it;
+            double delta_ej = double(ej.wt - it->first) / denom;
 
             if (delta_ej / ej_cost > delta_ei / ei_cost) {
                 // Advance j, H2 and H3 cases (at least two heavy)
