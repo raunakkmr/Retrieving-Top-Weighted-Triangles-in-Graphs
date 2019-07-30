@@ -207,6 +207,17 @@ namespace wsdm_2019_graph {
     typedef vector<vector<half_edge>> Graph;
     typedef map<int, vector<half_edge>> MappedGraph;
 
+    struct GraphStruct {
+        Graph G;
+        vector<full_edge> edges;
+
+        GraphStruct() {}
+        GraphStruct(Graph G_, vector<full_edge> edges_) {
+            G = G_;
+            edges = edges_;
+        }
+    };
+
     struct Shadow {
         MappedGraph g;
         int l;
@@ -288,41 +299,30 @@ namespace wsdm_2019_graph {
     // filename is the path to the file which contains the graph in the following
     // form: one line # n m, and m
     // lines representing edges u v w.
-    Graph read_graph(string filename, bool binary=false, bool normal_graph=false) {
+    GraphStruct read_graph(string filename, bool binary=false, bool normal_graph=false) {
 
         // no use for the times right now
         unordered_map<int, unordered_map<int, long long>> weight;
         map<int, int> label;
+        GraphStruct GS;
         int nnodes = 0;
         int nedges = 0;
         int m = 0;
 
         cerr << "reading in graph " << filename << endl;
 
-        Graph G;
         if (binary) {
-            //const unsigned int blength = 1024 * 1024;
-            //char buffer[blength];
-
             ifstream data_file(filename, ios::binary | ios::in);
-            //data_file.rdbuf()->pubsetbuf(buffer, blength);
-            //data_file.sync_with_stdio(0);
-            //data_file.tie(0);
-
             BinaryReader reader(data_file);
 
             nnodes = reader.read(4);
             m = reader.read(4);
 
-            G.resize(nnodes);
-
             size_t bytes_read = 8;
             cerr << "nodes and edges: " << nnodes << " " << m << endl;
 
-            //data_file.seekg (0, data_file.end);
-            //int length = data_file.tellg();
-            //data_file.seekg (0, data_file.beg);
-            //cerr << "number of bytes in file: " << length << endl;
+            GS.G.resize(nnodes);
+
             for (int i = 0; i < m; i++) {
                 unsigned char type = reader.read(1);
                 bytes_read += 1;
@@ -342,8 +342,8 @@ namespace wsdm_2019_graph {
                 }
 
                 //cerr << u << " " << v << " " << w << '\n';
-                G[u].push_back({v, w});
-                G[v].push_back({u, w});
+                GS.G[u].push_back({v, w});
+                GS.G[v].push_back({u, w});
 
                 bytes_read += 3 + bytes[0] + bytes[1] + bytes[2];
                 //cerr << bytes_read << " " << data_file.tellg() << '\n';
@@ -372,18 +372,18 @@ namespace wsdm_2019_graph {
                     }
                 }
             } else if (normal_graph) {
-                ifstream edges(filename, ifstream::in);
+                ifstream edge_file(filename, ifstream::in);
 
                 string hash = "";
-                edges >> hash >> nnodes >> m;
+                edge_file >> hash >> nnodes >> m;
                 cerr << "nodes and edges: " << nnodes << " " << m << endl;
 
-                G.resize(nnodes);
+                GS.G.resize(nnodes);
 
                 long long u, v, w;
                 long long node_id = 0;
                 for (int i = 0; i < m; i++) {
-                    edges >> u >> v >> w;
+                    edge_file >> u >> v >> w;
                     if (!label.count(u)) {
                         label[u] = node_id++;
                     }
@@ -392,8 +392,8 @@ namespace wsdm_2019_graph {
                     }
 
                     u = label[u], v = label[v];
-                    G[u].push_back({(int) v, w});
-                    G[v].push_back({(int) u, w});
+                    GS.G[u].push_back({(int) v, w});
+                    GS.G[v].push_back({(int) u, w});
                 }
             } else {
                 ifstream simplices(filename + "-simplices.txt", ifstream::in);
@@ -428,57 +428,65 @@ namespace wsdm_2019_graph {
             }
         }
 
-        ///*
         double largest_weight = 0, sum_weight = 0, median_weight = 0;
         vector<double> all_weights;
-        //*/
 
         cerr << "constructing graph with " << nnodes << " nodes" << endl;
         if (!binary && !normal_graph) {
-            G.resize(nnodes);
+            GS.G.resize(nnodes);
             for (auto& e0 : weight) {
                 for (auto& e1 : e0.second) {
                     int u = e0.first, v = e1.first;
                     long long w = e1.second;
-                    G[u].push_back({v, w});
-                    G[v].push_back({u, w});
+                    GS.G[u].push_back({v, w});
+                    GS.G[v].push_back({u, w});
+                    if (u < v) {
+                        GS.edges.push_back({u, v, w});
+                    } else {
+                        GS.edges.push_back({v, u, w});
+                    }
                     nedges++;
 
-                    ///*
                     largest_weight = max(largest_weight, (double) w);
                     sum_weight += w;
                     all_weights.push_back(w);
-                    //*/
                 }
             }
         } else {
-            ///*
-            for (int u = 0; u < (int) G.size(); u++) {
-                for (const auto& e : G[u]) {
+            for (int u = 0; u < (int) GS.G.size(); u++) {
+                for (const auto& e : GS.G[u]) {
                     int v = e.dst, w = e.wt;
                     if (u < v) {
+                        GS.edges.push_back({u, v, w});
                         nedges++;
+
                         largest_weight = max(largest_weight, (double) w);
                         sum_weight += w;
                         all_weights.push_back(w);
                     }
                 }
             }
-            //*/
         }
         cerr << "done constructing graph" << endl;
 
-        ///*
+        cerr << endl;
+
+        double sort_st = clock();
+        sort(GS.edges.rbegin(), GS.edges.rend());
+        cerr << "Sort time (s): " << 1.0 * (clock() - sort_st)/CLOCKS_PER_SEC << endl;
+
         nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
         median_weight = all_weights[all_weights.size() / 2];
         cerr << "Largest edge weight is " << largest_weight << endl;
         cerr << "Mean edge weight is " << sum_weight / nedges << endl;
         cerr << "Median edge weight is " << median_weight << endl;
-        //*/
+
+        cerr << endl;
 
         cerr << "read in a graph with " << nnodes << " nodes and " << nedges << " edges" << endl;
         cerr << "Average degree: " << 2.0 * nedges / nnodes << endl;
-        return G;
+
+        return GS;
     }
 
     // Modify the weights of the graph for p-means.

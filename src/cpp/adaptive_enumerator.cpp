@@ -15,14 +15,14 @@ int main(int argc, char* argv[]) {
     cin.tie(0);
     srand(0); 
 
-    auto G = read_graph(argv[1]);
+    auto GS = read_graph(argv[1]);
     int K = atoi(argv[2]);
 
-    auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
-    auto auto_thresh_heavy_light_tri = auto_thresholded_heavy_light(G, K);
+    auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);
+    auto auto_thresh_heavy_light_tri = auto_thresholded_heavy_light(GS, K);
 
 #if WRITE_STATISTICS
-    auto all_tris = brute_force_sampler(G);
+    auto all_tris = brute_force_sampler(GS);
 
     // Write out triangles to a file
     bool write_out_stats = false;

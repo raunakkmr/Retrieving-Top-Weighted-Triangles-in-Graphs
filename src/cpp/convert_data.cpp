@@ -10,8 +10,10 @@ int main(int argc, char* argv[]) {
     cin.tie(0);
     srand(0);
 
-    auto G = read_graph(argv[1]);
+    auto GS = read_graph(argv[1]);
     string dataset_path = argv[2];
+
+    Graph G = GS.G;
 
     int n = G.size();
     int m = 0;

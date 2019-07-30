@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     srand(0); 
 
     // auto G = read_graph(argv[1]);
-    auto G = read_graph(argv[1], true);
+    auto GS = read_graph(argv[1], true);
     string tri_file = argv[2];
     int CHECK_TRIANGLES = atoi(argv[3]);
     int K = atoi(argv[4]);
@@ -30,12 +30,12 @@ int main(int argc, char* argv[]) {
     cerr << endl;
 #endif
 
-    auto heavy_light_tri = heavy_light_sampler(G);
-    auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);;
-    auto auto_thresholded_tri = auto_thresholded_heavy_light(G, K);
+    auto heavy_light_tri = heavy_light_sampler(GS);
+    auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);;
+    auto auto_thresholded_tri = auto_thresholded_heavy_light(GS, K);
 
     if (CHECK_TRIANGLES) {
-        auto all_tris = brute_force_sampler(G);
+        auto all_tris = brute_force_sampler(GS);
         // auto all_tris = read_all_triangles_set(tri_file);
         cerr << "*** Comparing heavy light***" << endl;
         compare_statistics(all_tris, heavy_light_tri, K);
@@ -43,6 +43,8 @@ int main(int argc, char* argv[]) {
         compare_statistics(all_tris, adaptive_heavy_light_tri, K);
         cerr << "*** Comparing auto thresholded heavy light***" << endl;
         compare_statistics(all_tris, auto_thresholded_tri, K);
+
+        Graph &G = GS.G;
 
         // Write out triangles to a file
         bool write_out_stats = false;

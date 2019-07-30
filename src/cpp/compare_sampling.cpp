@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     srand(0); 
 
     // auto G = read_graph(argv[1]);
-    auto G = read_graph(argv[1], true);
+    auto GS = read_graph(argv[1], true);
     string tri_file = argv[2];
     int CHECK_TRIANGLES = atoi(argv[3]);
     int K = atoi(argv[4]);
@@ -34,18 +34,18 @@ int main(int argc, char* argv[]) {
     cerr << endl;
 #endif
 
-    auto res = edge_sampler_time(G, MAX_TIME, INC);
+    auto res = edge_sampler_time(GS, MAX_TIME, INC);
     auto edge_sampling_tri = res.first;
     auto edge_sampling_times = res.second;
-    res = wedge_sampler_time(G, MAX_TIME, INC);
+    res = wedge_sampler_time(GS, MAX_TIME, INC);
     auto wedge_sampling_tri = res.first;
     auto wedge_sampling_times = res.second;
-    res = path_sampler_time(G, MAX_TIME, INC);
+    res = path_sampler_time(GS, MAX_TIME, INC);
     auto path_sampling_tri = res.first;
     auto path_sampling_times = res.second;
 
     if (CHECK_TRIANGLES) {
-        auto all_tris = brute_force_sampler(G);
+        auto all_tris = brute_force_sampler(GS);
         // auto all_tris = read_all_triangles_set(tri_file);
         cerr << "*** Comparing edge sampling ***" << endl;
         compare_statistics_time(all_tris, edge_sampling_tri, edge_sampling_times, K);
@@ -53,6 +53,8 @@ int main(int argc, char* argv[]) {
         compare_statistics_time(all_tris, wedge_sampling_tri, wedge_sampling_times, K);
         cerr << "*** Comparing path sampling ***" << endl;
         compare_statistics_time(all_tris, path_sampling_tri, path_sampling_times, K);
+
+        Graph &G = GS.G;
 
         // Write out triangles to a file
         bool write_out_stats = false;

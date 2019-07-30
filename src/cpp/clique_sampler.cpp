@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     cin.tie(0);
     srand(0); 
 
-    auto G = read_graph(argv[1], true);
+    auto GS = read_graph(argv[1], true);
     int NUM_SAMPLES_EDGE = atoi(argv[2]);
     int CLIQUE_SIZE = atoi(argv[3]);
     int NUM_SAMPLES_CLIQUE = atoi(argv[4]);
@@ -53,17 +53,17 @@ int main(int argc, char* argv[]) {
 
     int nthreads = thread::hardware_concurrency();
 
-    auto edge_sampling_tri = edge_sampler(G, NUM_SAMPLES_EDGE);
-    auto edge_sampling_tri_parallel = edge_sampler_parallel(G, NUM_SAMPLES_EDGE, nthreads);
-    // auto wedge_sampling_tri = wedge_sampler(G, NUM_SAMPLES_WEDGE);
-    // auto path_sampling_tri = path_sampler(G, NUM_SAMPLES_PATH);
-    // auto heavy_light_sampling_tri = heavy_light_sampler(G, 0.05);
-    // auto adaptive_heavy_light_tri = adaptive_heavy_light(G, K);
-    // auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(G, K);
+    auto edge_sampling_tri = edge_sampler(GS, NUM_SAMPLES_EDGE);
+    auto edge_sampling_tri_parallel = edge_sampler_parallel(GS, NUM_SAMPLES_EDGE, nthreads);
+    // auto wedge_sampling_tri = wedge_sampler(GS, NUM_SAMPLES_WEDGE);
+    // auto path_sampling_tri = path_sampler(GS, NUM_SAMPLES_PATH);
+    // auto heavy_light_sampling_tri = heavy_light_sampler(GS, 0.05);
+    // auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);
+    // auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, K);
 
     if (CLIQUE_SIZE > 1) {
-        auto sampled_cliques = clique_sampler(G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
-        auto sampled_cliques_parallel = clique_sampler_parallel(G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE, nthreads);
+        auto sampled_cliques = clique_sampler(GS.G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
+        auto sampled_cliques_parallel = clique_sampler_parallel(GS.G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE, nthreads);
     }
     return 0;
 }

@@ -13,10 +13,10 @@ int main(int argc, char* argv[]) {
 
     // To use binary data files, add a character after out_path.
     // So run as ./brute_force_enumerator filename out_path {something here if we want to use binary otherwise nothing}.
-    auto G = read_graph(argv[1], argc > 3);
+    auto GS = read_graph(argv[1], argc > 3);
     string out_path = argv[2];
 
-    auto all_tris = brute_force_sampler(G);
+    auto all_tris = brute_force_sampler(GS);
     long long num_all_tris = all_tris.size();
 
     // ofstream triangle_file(dataset+"-triangles.txt");
@@ -54,6 +54,8 @@ int main(int argc, char* argv[]) {
         num_tris[get<2>(t.vertices)]++;
     }
     triangle_file.close();
+
+    Graph &G = GS.G;
 
     // ofstream tris_to_weight_file(dataset+"-ntris-to-weight.txt");
     ofstream tris_to_weight_file(out_path+"-ntris-to-weight.binary", ios::binary);
