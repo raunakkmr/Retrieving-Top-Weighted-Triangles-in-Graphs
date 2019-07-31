@@ -34,13 +34,16 @@ int main(int argc, char* argv[]) {
     cerr << endl;
 #endif
 
-    auto res = edge_sampler_time(GS, MAX_TIME, INC);
+    // auto res = edge_sampler_time(GS, MAX_TIME, INC);
+    auto res = edge_time_version(GS, MAX_TIME, INC);
     auto edge_sampling_tri = res.first;
     auto edge_sampling_times = res.second;
-    res = wedge_sampler_time(GS, MAX_TIME, INC);
+    // res = wedge_sampler_time(GS, MAX_TIME, INC);
+    res = wedge_time_version(GS, MAX_TIME, INC);
     auto wedge_sampling_tri = res.first;
     auto wedge_sampling_times = res.second;
-    res = path_sampler_time(GS, MAX_TIME, INC);
+    // res = path_sampler_time(GS, MAX_TIME, INC);
+    res = path_time_version(GS, MAX_TIME, INC);
     auto path_sampling_tri = res.first;
     auto path_sampling_times = res.second;
 
