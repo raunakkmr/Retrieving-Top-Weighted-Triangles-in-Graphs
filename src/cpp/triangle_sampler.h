@@ -129,17 +129,19 @@ namespace wsdm_2019_graph {
       }
     }
 
-    vector<long long> cumulative_weights;
+    vector<long long> cumulative_weights(edge_distribution.size());
     vector<long long> index_to_weight(edge_distribution.size());
     int count = 0;
     long long prev = 0;
     // todo: replace this with p means
     for (const auto& kv : edge_distribution) {
       //cerr << kv.first << " " << kv.second.size() << endl;
-      cumulative_weights.push_back(kv.second.size() * kv.first);
-      cumulative_weights[cumulative_weights.size() - 1] += prev;
+      // cumulative_weights.push_back(kv.second.size() * kv.first);
+      // cumulative_weights[cumulative_weights.size() - 1] += prev;
+      // prev = cumulative_weights.back();
+      cumulative_weights[count] = kv.second.size() * kv.first + prev;
+      prev = cumulative_weights[count];
       index_to_weight[count++] = kv.first;
-      prev = cumulative_weights.back();
     }
     cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
     cerr << "Edge weight classes: " << edge_distribution.size() << endl;
@@ -227,7 +229,7 @@ namespace wsdm_2019_graph {
     Graph &G = GS.G;
 
     // build sampling distribution over vertices
-    vector<long long> cumulative_weights;
+    vector<long long> cumulative_weights(G.size());
     vector<vector<long long>> vertex_cumulative_weights_1(G.size());
     vector<vector<long long>> vertex_cumulative_weights_2(G.size());
     long long prev = 0;
@@ -244,9 +246,11 @@ namespace wsdm_2019_graph {
         total_weight += G[i].size() * e.wt + vertex_weight;
         vertex_cumulative_weights_1[i].push_back(total_weight);
       }
-      cumulative_weights.push_back(total_weight);
-      cumulative_weights[cumulative_weights.size() - 1] += prev;
-      prev = cumulative_weights.back();
+      // cumulative_weights.push_back(total_weight);
+      // cumulative_weights[cumulative_weights.size() - 1] += prev;
+      // prev = cumulative_weights.back();
+      cumulative_weights[i] = total_weight + prev;
+      prev = cumulative_weights[i];
     }
 
     // build an adjacency matrix where a(i, j) = weight of edge (i, j)
@@ -346,8 +350,8 @@ namespace wsdm_2019_graph {
     double pre_st = clock();
 
     Graph &G = GS.G;
+    vector<full_edge> &edges = GS.edges;
 
-    vector<full_edge> edges;
     vector<double> weight_sum(G.size());
     vector<vector<long long>> node_sums(G.size());
     for (int u = 0; u < (int) G.size(); u++) {
@@ -356,20 +360,20 @@ namespace wsdm_2019_graph {
       long long prev = 0;
       for (auto e : G[u]) {
         weight_sum[u] += e.wt;
-        if (u < e.dst) {
-          edges.push_back({u, e.dst, e.wt});
-        }
         node_sums[u].push_back(prev + e.wt);
         prev = node_sums[u].back();
       }
     }
 
-    vector<double> sum_edge_weight;
+    vector<double> sum_edge_weight(GS.m);
+    int count = 0;
     double prev = 0;
     for (auto e : edges) {
       double weight = e.wt * (weight_sum[e.src] - e.wt) * (weight_sum[e.dst] - e.wt);
-      sum_edge_weight.push_back(weight + prev);
-      prev = sum_edge_weight.back();
+      // sum_edge_weight.push_back(weight + prev);
+      // prev = sum_edge_weight.back();
+      sum_edge_weight[count] = weight + prev;
+      prev = sum_edge_weight[count++];
     }
 
     default_random_engine generator;
@@ -1276,6 +1280,7 @@ namespace wsdm_2019_graph {
      */
 
     double st = clock();
+    // Since brute_force_sampler does not need to know the number of edges, GSh.m is not updated here.
     GraphStruct GSh;
     for (int i = 0; i < (int) (p * edges.size()); i++) {
       GSh.G.resize(max(edges[i].dst+1, (int) GSh.G.size()));
