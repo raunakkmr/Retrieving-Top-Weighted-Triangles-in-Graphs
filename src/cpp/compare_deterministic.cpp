@@ -30,19 +30,19 @@ int main(int argc, char* argv[]) {
     cerr << endl;
 #endif
 
-    auto heavy_light_tri = heavy_light_sampler(GS);
+    auto heavy_light_tri = heavy_light_sampler(GS, K);
     auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);;
     auto auto_thresholded_tri = auto_thresholded_heavy_light(GS, K);
 
     if (CHECK_TRIANGLES) {
-        auto all_tris = brute_force_sampler(GS);
+        auto all_tris = brute_force_sampler(GS, K);
         // auto all_tris = read_all_triangles_set(tri_file);
         cerr << "*** Comparing heavy light***" << endl;
-        compare_statistics(all_tris, heavy_light_tri, K);
+        compare_statistics(all_tris, heavy_light_tri, K, true);
         cerr << "*** Comparing adaptive heavy light***" << endl;
-        compare_statistics(all_tris, adaptive_heavy_light_tri, K);
+        compare_statistics(all_tris, adaptive_heavy_light_tri, K, true);
         cerr << "*** Comparing auto thresholded heavy light***" << endl;
-        compare_statistics(all_tris, auto_thresholded_tri, K);
+        compare_statistics(all_tris, auto_thresholded_tri, K, true);
 
         Graph &G = GS.G;
 

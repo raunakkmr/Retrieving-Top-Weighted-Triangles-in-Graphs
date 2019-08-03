@@ -58,12 +58,14 @@ namespace wsdm_2019_graph {
     return s;
   }
 
-  set<weighted_triangle> brute_force_sampler(GraphStruct &GS, bool diagnostic = true) {
+  // If k=-1 then returns all triangles otherwise returns top-k.
+  set<weighted_triangle> brute_force_sampler(GraphStruct &GS, int k=-1, bool diagnostic=true) {
     if (diagnostic) {
       cerr << "=============================================" << endl;
       cerr << "Running brute force detection for triangles" << endl;
       cerr << "=============================================" << endl;
     }
+
     double st = clock();
 
     // Can use degeneracy ordering to speed up brute force
@@ -88,7 +90,17 @@ namespace wsdm_2019_graph {
           if (vert_to_wt[ev.dst]) {
             // todo: replace with p means
             long long val = ev.wt + vert_to_wt[ev.dst] + w;
-            counter.insert(weighted_triangle(u, v, ev.dst, val));
+            weighted_triangle tri = weighted_triangle(u, v, ev.dst, val);
+            if (k < 0 || (int) counter.size() < k) {
+              counter.insert(tri);
+            } else {
+              // Compare weights, not triangles.
+              auto it = counter.begin();
+              if (val > it->weight) {
+                counter.erase(counter.begin());
+                counter.insert(tri);
+              }
+            }
           }
         }
       }
@@ -1253,7 +1265,8 @@ namespace wsdm_2019_graph {
   }
 
 
-  set<weighted_triangle> heavy_light_sampler(GraphStruct &GS, double p = 0.1) {
+  // If k=-1 then returns all triangles otherwise returns top-k.
+  set<weighted_triangle> heavy_light_sampler(GraphStruct &GS, int k=-1, double p = 0.1) {
     cerr << "=============================================" << endl;
     cerr << "Running heavy light sampling for triangles" << endl;
     cerr << "=============================================" << endl;
@@ -1287,7 +1300,7 @@ namespace wsdm_2019_graph {
       GSh.G[edges[i].src].push_back({edges[i].dst, edges[i].wt});
       GSh.G[edges[i].dst].push_back({edges[i].src, edges[i].wt});
     }
-    auto counter = brute_force_sampler(GSh, false);
+    auto counter = brute_force_sampler(GSh, k, false);
 
     /*
        for (int i = (int) (p * edges.size()); i < (int) edges.size(); i++) {
@@ -1777,7 +1790,8 @@ namespace wsdm_2019_graph {
   template<class U>
     void compare_statistics(set<weighted_triangle> &all_triangles,
         U &sampled_triangles,
-        int K) {
+        int K,
+        bool check_k=false) {
       cerr << "=============================================" << endl;
       cerr << "Comparing statistics" << endl;
       cerr << "=============================================" << endl;
@@ -1800,32 +1814,41 @@ namespace wsdm_2019_graph {
       vector<long long> weights(unique_weights.begin(), unique_weights.end());
       sort(weights.rbegin(), weights.rend());
 
-      for (const auto &T : all_triangles) {
-        if (custom_find(sampled_triangles, T)) {
+      if (check_k) {
+        for (const auto &T : sampled_triangles) {
           num_found++;
           if (num_found < k+1) {
             ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
-            /*
-               percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_triangles.size();
-               top_sampled_weights[num_found-1] = T.weight;
-             */
           }
         }
-        curr_tri++;
-        /*
-           if (curr_tri < k+1) {
-           top_true_weights[curr_tri-1] = T.weight;
-           }
-         */
+      } else {
+        for (const auto &T : all_triangles) {
+          if (custom_find(sampled_triangles, T)) {
+            num_found++;
+            if (num_found < k+1) {
+              ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
+              /*
+                 percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_triangles.size();
+                 top_sampled_weights[num_found-1] = T.weight;
+               */
+            }
+          }
+          curr_tri++;
+          /*
+             if (curr_tri < k+1) {
+             top_true_weights[curr_tri-1] = T.weight;
+             }
+           */
 
-        if (num_found != curr_tri && !first_break) {
-          first_break = true;
-          cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;
-        }
+          if (num_found != curr_tri && !first_break) {
+            first_break = true;
+            cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;
+          }
 
-        if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
-          cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
-          bidx++;
+          if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
+            cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
+            bidx++;
+          }
         }
       }
       /*
