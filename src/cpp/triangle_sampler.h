@@ -95,9 +95,9 @@ namespace wsdm_2019_graph {
               counter.insert(tri);
             } else {
               // Compare weights, not triangles.
-              auto it = counter.begin();
+              auto it = --(counter.end());
               if (val > it->weight) {
-                counter.erase(counter.begin());
+                counter.erase(it);
                 counter.insert(tri);
               }
             }
@@ -1358,7 +1358,7 @@ namespace wsdm_2019_graph {
 
   }
 
-  set<weighted_triangle> adaptive_heavy_light(GraphStruct &GS, int k = 100, bool use_map = false, bool keep_k = true) {
+  set<weighted_triangle> adaptive_heavy_light(GraphStruct &GS, int k = 100, bool use_map = false, bool keep_k = false) {
     cerr << "=============================================" << endl;
     cerr << "Running adaptive heavy light for triangles" << endl;
     cerr << "=============================================" << endl;
@@ -1428,8 +1428,9 @@ namespace wsdm_2019_graph {
             }
             if (keep_k && (int) counter.size() > k+2) {
               // Compare weights, not triangles.
-              if (weight > counter.begin()->weight) {
-                counter.erase(counter.begin());
+              auto it = --(counter.end());
+              if (weight > it->weight) {
+                counter.erase(it);
                 counter.insert(T);
               }
             } else {
@@ -1460,8 +1461,9 @@ namespace wsdm_2019_graph {
             }
             if (keep_k && (int) counter.size() > k+2) {
               // Compare weights, not triangles.
-              if (weight > counter.begin()->weight) {
-                counter.erase(counter.begin());
+              auto it = --(counter.end());
+              if (weight > it->weight) {
+                counter.erase(it);
                 counter.insert(T);
               }
             } else {
@@ -1484,8 +1486,9 @@ namespace wsdm_2019_graph {
             }
             if (keep_k && (int) counter.size() > k+2) {
               // Compare weights, not triangles.
-              if (weight > counter.begin()->weight) {
-                counter.erase(counter.begin());
+              auto it = --(counter.end());
+              if (weight > it->weight) {
+                counter.erase(it);
                 counter.insert(T);
               }
             } else {
@@ -1522,8 +1525,9 @@ namespace wsdm_2019_graph {
               }
               if (keep_k && (int) counter.size() > k+2) {
                 // Compare weights, not triangles.
-                if (weight > counter.begin()->weight) {
-                  counter.erase(counter.begin());
+                auto it = --(counter.end());
+                if (weight > it->weight) {
+                  counter.erase(it);
                   counter.insert(T);
                 }
               } else {
@@ -1547,8 +1551,9 @@ namespace wsdm_2019_graph {
               }
               if (keep_k && (int) counter.size() > k+2) {
                 // Compare weights, not triangles.
-                if (weight > counter.begin()->weight) {
-                  counter.erase(counter.begin());
+                auto it = --(counter.end());
+                if (weight > it->weight) {
+                  counter.erase(it);
                   counter.insert(T);
                 }
               } else {
@@ -1587,7 +1592,7 @@ namespace wsdm_2019_graph {
 
   // Same as adaptive heavy light EXCEPT the magic 
   // constant is computed on the fly automatically
-  set<weighted_triangle> auto_thresholded_heavy_light(GraphStruct &GS, int k = 100, bool use_map = false, bool keep_k = true) {
+  set<weighted_triangle> auto_thresholded_heavy_light(GraphStruct &GS, int k = 100, bool use_map = false, bool keep_k = false) {
     cerr << "=============================================" << endl;
     cerr << "Running auto thresholded heavy light for triangles" << endl;
     cerr << "=============================================" << endl;
@@ -1699,8 +1704,9 @@ namespace wsdm_2019_graph {
             }
             if (keep_k && (int) counter.size() > k+2) {
               // Compare weights, not triangles.
-              if (weight > counter.begin()->weight) {
-                counter.erase(counter.begin());
+              auto it = --(counter.end());
+              if (weight > it->weight) {
+                counter.erase(it);
                 counter.insert(T);
               }
             } else {
@@ -1731,8 +1737,9 @@ namespace wsdm_2019_graph {
             }
             if (keep_k && (int) counter.size() > k+2) {
               // Compare weights, not triangles.
-              if (weight > counter.begin()->weight) {
-                counter.erase(counter.begin());
+              auto it = --(counter.end());
+              if (weight > it->weight) {
+                counter.erase(it);
                 counter.insert(T);
               }
             } else {
@@ -1755,8 +1762,9 @@ namespace wsdm_2019_graph {
             }
             if (keep_k && (int) counter.size() > k+2) {
               // Compare weights, not triangles.
-              if (weight > counter.begin()->weight) {
-                counter.erase(counter.begin());
+              auto it = --(counter.end());
+              if (weight > it->weight) {
+                counter.erase(it);
                 counter.insert(T);
               }
             } else {
@@ -1793,8 +1801,9 @@ namespace wsdm_2019_graph {
               }
               if (keep_k && (int) counter.size() > k+2) {
                 // Compare weights, not triangles.
-                if (weight > counter.begin()->weight) {
-                  counter.erase(counter.begin());
+                auto it = --(counter.end());
+                if (weight > it->weight) {
+                  counter.erase(it);
                   counter.insert(T);
                 }
               } else {
@@ -1818,8 +1827,9 @@ namespace wsdm_2019_graph {
               }
               if (keep_k && (int) counter.size() > k+2) {
                 // Compare weights, not triangles.
-                if (weight > counter.begin()->weight) {
-                  counter.erase(counter.begin());
+                auto it = --(counter.end());
+                if (weight > it->weight) {
+                  counter.erase(it);
                   counter.insert(T);
                 }
               } else {
