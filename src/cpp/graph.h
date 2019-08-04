@@ -2,6 +2,11 @@
 #define GRAPH_H
 
 #include <bits/stdc++.h>
+#include <thread>
+#include <parallel/algorithm>
+#include <time.h>
+#include <sys/sysinfo.h>
+
 using namespace std;
 
 namespace wsdm_2019_graph {
@@ -99,10 +104,16 @@ namespace wsdm_2019_graph {
   struct full_edge {
     int src, dst;
     long long wt;
+    full_edge() {
+      wt = 0;
+    }
     full_edge(int s, int d, long long w) : src(s), dst(d), wt(w) {}
     inline bool operator<(const full_edge& o) const {
       if (o.wt != wt) return wt < o.wt;
       return make_pair(src, dst) < make_pair(o.src, o.dst);
+    }
+    inline bool operator==(const full_edge& o) const {
+      return (o.wt == wt) && (o.src == src) && (o.dst == dst);
     }
   };
 
@@ -113,6 +124,9 @@ namespace wsdm_2019_graph {
     inline const bool operator<(const half_edge& o) const {
       if (dst == o.dst) return wt > o.wt;
       return dst < o.dst;
+    }
+    inline bool operator==(const half_edge& o) const {
+      return (dst == o.dst) && (wt == o.wt);
     }
   };
 
@@ -139,6 +153,7 @@ namespace wsdm_2019_graph {
       weight = t.weight;
       return *this;
     }
+    weighted_triangle& operator=(const weighted_triangle&) = default;
 
     inline const bool operator<(const weighted_triangle& o) const {
       if (weight != o.weight) return weight > o.weight;
@@ -181,6 +196,7 @@ namespace wsdm_2019_graph {
       weight = wc.weight;
       return *this;
     }
+    weighted_clique& operator=(const weighted_clique&) = default;
 
     inline const bool operator<(const weighted_clique& o) const {
       if (weight != o.weight) return weight > o.weight;
@@ -476,12 +492,18 @@ namespace wsdm_2019_graph {
     GS.m = nedges;
 
     cerr << "done constructing graph" << endl;
-
     cerr << endl;
 
-    double sort_st = clock();
-    sort(GS.edges.rbegin(), GS.edges.rend());
-    cerr << "Sort time (s): " << 1.0 * (clock() - sort_st)/CLOCKS_PER_SEC << endl;
+    omp_set_num_threads(thread::hardware_concurrency());
+    omp_set_nested(1);
+    cerr << "Starting parallel sort." << endl;
+    struct timespec sort_st, sort_end;
+    clock_gettime(CLOCK_MONOTONIC, &sort_st);
+    __gnu_parallel::sort(GS.edges.rbegin(), GS.edges.rend());
+    clock_gettime(CLOCK_MONOTONIC, &sort_end);
+    double sort_time = (sort_end.tv_sec - sort_st.tv_sec);
+    sort_time += (sort_end.tv_nsec - sort_st.tv_nsec) / 1000000000.0;
+    cerr << "Sort time (s): " << sort_time << endl;
 
     nth_element(all_weights.begin(), all_weights.begin() + all_weights.size() / 2, all_weights.end());
     median_weight = all_weights[all_weights.size() / 2];

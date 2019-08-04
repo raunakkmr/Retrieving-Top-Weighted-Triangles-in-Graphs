@@ -2,8 +2,8 @@ src = $(wildcard *.cpp)
 obj = $(src:.cpp=.o)
 exe = $(src:.cpp=)
 
-LDFLAGS = -lm -pthread
-CXXFLAGS = -O3 -g -std=c++17 -Wall
+LDFLAGS = -fopenmp
+CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall #-D_GLIBCXX_PARALLEL
 
 test_reading: test_reading.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)

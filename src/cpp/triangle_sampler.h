@@ -2,6 +2,7 @@
 #define TRIANGLE_SAMPLER_H
 
 #include <bits/stdc++.h>
+#include <parallel/algorithm>
 
 #include "graph.h"
 
@@ -1902,7 +1903,10 @@ namespace wsdm_2019_graph {
         unique_weights.insert(T.weight);
       }
       vector<long long> weights(unique_weights.begin(), unique_weights.end());
-      sort(weights.rbegin(), weights.rend());
+      
+      omp_set_num_threads(thread::hardware_concurrency());
+      omp_set_nested(1);
+      __gnu_parallel::sort(weights.rbegin(), weights.rend());
 
       if (check_k) {
         for (const auto &T : sampled_triangles) {
@@ -2009,7 +2013,10 @@ namespace wsdm_2019_graph {
       unique_weights.insert(T.weight);
     }
     vector<long long> weights(unique_weights.begin(), unique_weights.end());
-    sort(weights.rbegin(), weights.rend());
+    
+    omp_set_num_threads(thread::hardware_concurrency());
+    omp_set_nested(1);
+    __gnu_parallel::sort(weights.rbegin(), weights.rend());
 
     for (auto T : all_triangles) {
       if (sampled_triangles.count(T)) {
@@ -2094,7 +2101,10 @@ namespace wsdm_2019_graph {
       unique_weights.insert(T.weight);
     }
     vector<long long> weights(unique_weights.begin(), unique_weights.end());
-    sort(weights.rbegin(), weights.rend());
+    
+    omp_set_num_threads(thread::hardware_concurrency());
+    omp_set_nested(1);
+    __gnu_parallel::sort(weights.rbegin(), weights.rend());
 
     set<weighted_triangle> sampled_triangles;
     for (int i = 0; i < (int) times.size(); i++) {

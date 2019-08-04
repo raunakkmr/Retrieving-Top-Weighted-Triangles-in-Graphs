@@ -462,6 +462,7 @@ namespace wsdm_2019_graph {
             freespecialsparse(g,k);
 
             if (print_diagnostic) {
+		t2 = time(NULL);
                 printf("- Overall time = %ldh%ldm%lds\n",(t2-t0)/3600,((t2-t0)%3600)/60,((t2-t0)%60));
             }
             return retval;
