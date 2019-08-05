@@ -10,13 +10,14 @@ int main(int argc, char* argv[]) {
     cin.tie(0);
     srand(0);
 
-    auto GS = read_graph(argv[1]);
+    // auto GS = read_graph(argv[1]);
+    auto GS = read_graph(argv[1], false, true);
     string dataset_path = argv[2];
 
     Graph G = GS.G;
 
     int n = G.size();
-    int m = 0;
+    long long m = 0;
     vector<pair<int, int>> sort_by_deg;
     for (int u = 0; u < (int) G.size(); u++) {
         if (G[u].empty()) continue;
@@ -36,7 +37,8 @@ int main(int argc, char* argv[]) {
     ofstream out_file(dataset_path+".binary", ios::binary | ios::out);
 
     binary_write(out_file, n);
-    binary_write(out_file, m);
+    int m_int = (int) m;
+    binary_write(out_file, m_int);
 
     size_t est_bytes = 8;
     for (int u = 0; u < (int) G.size(); u++) {
