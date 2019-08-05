@@ -73,6 +73,7 @@ namespace wsdm_2019_graph {
     // However, on certain tests it didnt have great performance.
     Graph &G = GS.G;
     set<weighted_triangle> counter;
+    long long num_tris = 0;
 
     vector<long long> vert_to_wt(G.size());
     for (int u = 0; u < (int) G.size(); u++) {
@@ -92,6 +93,7 @@ namespace wsdm_2019_graph {
             // todo: replace with p means
             long long val = ev.wt + vert_to_wt[ev.dst] + w;
             weighted_triangle tri = weighted_triangle(u, v, ev.dst, val);
+            num_tris++;
             if (k < 0 || (int) counter.size() < k) {
               counter.insert(tri);
             } else {
@@ -111,8 +113,8 @@ namespace wsdm_2019_graph {
         vert_to_wt[e.dst] = 0;
       }
     }
+    cerr << "Found " << num_tris << " triangles." << endl;
     if (diagnostic) {
-      cerr << "Found " << counter.size() << " triangles." << endl;
       if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
       double tot_time = (clock() - st) / CLOCKS_PER_SEC;
@@ -1383,6 +1385,7 @@ namespace wsdm_2019_graph {
 
     double st = clock();
     set<weighted_triangle> counter, topk;
+    long long num_tris = 0;
 
     Graph Gh;
     int hi = 0, hj = 0;
@@ -1424,6 +1427,7 @@ namespace wsdm_2019_graph {
           if (if_cond_1) {
             long long weight = ej.wt + e.wt + wt_1;
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
+            num_tris++;
             if (weight >= threshold) {
               topk.insert(T);
             }
@@ -1431,6 +1435,9 @@ namespace wsdm_2019_graph {
               // Compare weights, not triangles.
               auto it = --(counter.end());
               if (weight > it->weight) {
+                if (curr == it) {
+                  curr--;
+                }
                 counter.erase(it);
                 counter.insert(T);
               }
@@ -1457,6 +1464,7 @@ namespace wsdm_2019_graph {
           if (if_cond_2) {
             long long weight = ej.wt + e.wt + wt_2;
             weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+            num_tris++;
             if (weight >= threshold) {
               topk.insert(T);
             }
@@ -1464,6 +1472,9 @@ namespace wsdm_2019_graph {
               // Compare weights, not triangles.
               auto it = --(counter.end());
               if (weight > it->weight) {
+                if (curr == it) {
+                  curr--;
+                }
                 counter.erase(it);
                 counter.insert(T);
               }
@@ -1482,6 +1493,7 @@ namespace wsdm_2019_graph {
           if (vert_to_wt.count(e.dst)) {
             long long weight = ej.wt + e.wt + vert_to_wt[e.dst];
             weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+            num_tris++;
             if (weight >= threshold) {
               topk.insert(T);
             }
@@ -1489,6 +1501,9 @@ namespace wsdm_2019_graph {
               // Compare weights, not triangles.
               auto it = --(counter.end());
               if (weight > it->weight) {
+                if (curr == it) {
+                  curr--;
+                }
                 counter.erase(it);
                 counter.insert(T);
               }
@@ -1521,6 +1536,7 @@ namespace wsdm_2019_graph {
             if (vert_to_wt.count(kv.first)) {
               long long weight = ei.wt + kv.second + vert_to_wt[kv.first];
               weighted_triangle T(kv.first, ei.src, ei.dst, weight);
+              num_tris++;
               if (weight >= threshold) {
                 topk.insert(T);
               }
@@ -1528,6 +1544,9 @@ namespace wsdm_2019_graph {
                 // Compare weights, not triangles.
                 auto it = --(counter.end());
                 if (weight > it->weight) {
+                  if (curr == it) {
+                    curr--;
+                  }
                   counter.erase(it);
                   counter.insert(T);
                 }
@@ -1547,6 +1566,7 @@ namespace wsdm_2019_graph {
             if (vert_to_wt.count(nbr.dst)) {
               long long weight = ei.wt + nbr.wt + vert_to_wt[nbr.dst];
               weighted_triangle T(nbr.dst, ei.src, ei.dst, weight);
+              num_tris++;
               if (weight >= threshold) {
                 topk.insert(T);
               }
@@ -1554,6 +1574,9 @@ namespace wsdm_2019_graph {
                 // Compare weights, not triangles.
                 auto it = --(counter.end());
                 if (weight > it->weight) {
+                  if (curr == it) {
+                    curr--;
+                  }
                   counter.erase(it);
                   counter.insert(T);
                 }
@@ -1579,7 +1602,7 @@ namespace wsdm_2019_graph {
     // in topk as well. So topk actually has one fewer triangle than it reports.
     counter.erase(counter.begin());
 
-    cerr << "Found " << counter.size() << " triangles." << endl;
+    cerr << "Found " << num_tris << " triangles." << endl;
     cerr << "Out of these, the top " << int(topk.size()) - 1 << " are found for sure." << endl;
     if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
@@ -1649,6 +1672,7 @@ namespace wsdm_2019_graph {
 
     double st = clock();
     set<weighted_triangle> counter, topk;
+    long long num_tris = 0;
 
     Graph Gh;
     int hi = 0, hj = 0;
@@ -1700,6 +1724,7 @@ namespace wsdm_2019_graph {
           if (if_cond_1) {
             long long weight = ej.wt + e.wt + wt_1;
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
+            num_tris++;
             if (weight >= threshold) {
               topk.insert(T);
             }
@@ -1707,6 +1732,9 @@ namespace wsdm_2019_graph {
               // Compare weights, not triangles.
               auto it = --(counter.end());
               if (weight > it->weight) {
+                if (curr == it) {
+                  curr--;
+                }
                 counter.erase(it);
                 counter.insert(T);
               }
@@ -1733,6 +1761,7 @@ namespace wsdm_2019_graph {
           if (if_cond_2) {
             long long weight = ej.wt + e.wt + wt_2;
             weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+            num_tris++;
             if (weight >= threshold) {
               topk.insert(T);
             }
@@ -1740,6 +1769,9 @@ namespace wsdm_2019_graph {
               // Compare weights, not triangles.
               auto it = --(counter.end());
               if (weight > it->weight) {
+                if (curr == it) {
+                  curr--;
+                }
                 counter.erase(it);
                 counter.insert(T);
               }
@@ -1758,6 +1790,7 @@ namespace wsdm_2019_graph {
           if (vert_to_wt.count(e.dst)) {
             long long weight = ej.wt + e.wt + vert_to_wt[e.dst];
             weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+            num_tris++;
             if (weight >= threshold) {
               topk.insert(T);
             }
@@ -1765,6 +1798,9 @@ namespace wsdm_2019_graph {
               // Compare weights, not triangles.
               auto it = --(counter.end());
               if (weight > it->weight) {
+                if (curr == it) {
+                  curr--;
+                }
                 counter.erase(it);
                 counter.insert(T);
               }
@@ -1797,6 +1833,7 @@ namespace wsdm_2019_graph {
             if (vert_to_wt.count(kv.first)) {
               long long weight = ei.wt + kv.second + vert_to_wt[kv.first];
               weighted_triangle T(kv.first, ei.src, ei.dst, weight);
+              num_tris++;
               if (weight >= threshold) {
                 topk.insert(T);
               }
@@ -1804,6 +1841,9 @@ namespace wsdm_2019_graph {
                 // Compare weights, not triangles.
                 auto it = --(counter.end());
                 if (weight > it->weight) {
+                  if (curr == it) {
+                    curr--;
+                  }
                   counter.erase(it);
                   counter.insert(T);
                 }
@@ -1823,6 +1863,7 @@ namespace wsdm_2019_graph {
             if (vert_to_wt.count(nbr.dst)) {
               long long weight = ei.wt + nbr.wt + vert_to_wt[nbr.dst];
               weighted_triangle T(nbr.dst, ei.src, ei.dst, weight);
+              num_tris++;
               if (weight >= threshold) {
                 topk.insert(T);
               }
@@ -1830,6 +1871,9 @@ namespace wsdm_2019_graph {
                 // Compare weights, not triangles.
                 auto it = --(counter.end());
                 if (weight > it->weight) {
+                  if (curr == it) {
+                    curr--;
+                  }
                   counter.erase(it);
                   counter.insert(T);
                 }
@@ -1855,7 +1899,7 @@ namespace wsdm_2019_graph {
     // in topk as well. So topk actually has one fewer triangle than it reports.
     counter.erase(counter.begin());
 
-    cerr << "Found " << counter.size() << " triangles." << endl;
+    cerr << "Found " << num_tris << " triangles." << endl;
     cerr << "Out of these, the top " << int(topk.size()) - 1 << " are found for sure." << endl;
     if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
 
@@ -1913,6 +1957,8 @@ namespace wsdm_2019_graph {
           num_found++;
           if (num_found < k+1) {
             ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
+          } else {
+            break;
           }
         }
       } else {
@@ -1953,7 +1999,9 @@ namespace wsdm_2019_graph {
          cerr << rank << " ";
          }
          cerr << endl;
+      */
 
+      /*
          cerr << "=============================================" << endl;
          cerr << "Percentiles of top " << k << " triangles" << endl;
          cerr << "=============================================" << endl;
@@ -1963,13 +2011,13 @@ namespace wsdm_2019_graph {
          cerr << endl;
        */
 
-      long double recall = 0.0;
+      long double precision = 0.0;
       for (int i = 0; i < k; i++) {
-        recall += (ranks[i] <= k);
+        precision += (ranks[i] <= k);
       }
-      recall /= k;
+      precision /= k;
       cerr << "=============================================" << endl;
-      cerr << "Recall: " << recall << endl;
+      cerr << "Precision: " << precision << endl;
       cerr << "=============================================" << endl;
 
       /*
