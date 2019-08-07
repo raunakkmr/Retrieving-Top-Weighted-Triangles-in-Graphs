@@ -1947,7 +1947,7 @@ namespace wsdm_2019_graph {
         unique_weights.insert(T.weight);
       }
       vector<long long> weights(unique_weights.begin(), unique_weights.end());
-      
+
       omp_set_num_threads(thread::hardware_concurrency());
       omp_set_nested(1);
       __gnu_parallel::sort(weights.rbegin(), weights.rend());
@@ -2011,129 +2011,23 @@ namespace wsdm_2019_graph {
          cerr << endl;
        */
 
-      long double precision = 0.0;
-      for (int i = 0; i < k; i++) {
-        precision += (ranks[i] <= k);
-      }
-      precision /= k;
+      long double acc = 0.0;
+      vector<long long> all_weights;
+      all_weights.reserve(all_triangles.size());
+      for (const auto &T : all_triangles) all_weights.push_back(T.weight);
+      set<long long> weights_set(all_weights.begin(), all_weights.end());
+      map<long long, long long> cnt_all, cnt_sampled;
+      vector<long long> top_weights(all_weights.begin(), all_weights.begin()+k);
+      for (const auto &w : all_weights) cnt_all[w]++;
+      for (const auto &T : sampled_triangles) cnt_sampled[T.weight]++;
+      for (const auto &w : weights_set) acc += min(cnt_all[w], cnt_sampled[w]);
+      acc /= k;
       cerr << "=============================================" << endl;
-      cerr << "Precision: " << precision << endl;
+      cerr << "Accuracy: " << acc << endl;
       cerr << "=============================================" << endl;
-
-      /*
-         cerr << "=============================================" << endl;
-         cerr << "Weights of true top " << k << " triangles" << endl;
-         cerr << "=============================================" << endl;
-         for (const auto &wt : top_true_weights) {
-         cerr << wt << " ";
-         }
-         cerr << endl;
-         cerr << "=============================================" << endl;
-         cerr << "Weights of sampled top " << k << " triangles" << endl;
-         cerr << "=============================================" << endl;
-         for (const auto &wt : top_sampled_weights) {
-         cerr << wt << " ";
-         }
-         cerr << endl;
-       */
 
       cerr << endl;
     }
-
-
-  void compare_statistics_set(set<weighted_triangle>& all_triangles, set<weighted_triangle>& sampled_triangles, int K) {
-    cerr << "=============================================" << endl;
-    cerr << "Comparing sampling statistics" << endl;
-    cerr << "=============================================" << endl;
-
-    int num_found = 0;
-    int curr_tri = 0;
-    bool first_break = 0;
-    int bidx = 0;
-    vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
-
-    int k = min(K, (int)sampled_triangles.size());
-    vector<long long> ranks(k), top_sampled_weights(k), top_true_weights(k);
-    vector<long double> percentiles(k);
-
-    set<long long> unique_weights;
-    for (const auto &T : all_triangles) {
-      unique_weights.insert(T.weight);
-    }
-    vector<long long> weights(unique_weights.begin(), unique_weights.end());
-    
-    omp_set_num_threads(thread::hardware_concurrency());
-    omp_set_nested(1);
-    __gnu_parallel::sort(weights.rbegin(), weights.rend());
-
-    for (auto T : all_triangles) {
-      if (sampled_triangles.count(T)) {
-        num_found++;
-        if (num_found < k+1) {
-          // ranks[num_found-1] = curr_tri+1;
-          ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
-          percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_triangles.size();
-          top_sampled_weights[num_found-1] = T.weight;
-        }
-      }
-      curr_tri++;
-      if (curr_tri < k+1) {
-        top_true_weights[curr_tri-1] = T.weight;
-      }
-
-      if (num_found != curr_tri && !first_break) {
-        first_break = true;
-        cerr << "Found top " << 100.0 * num_found / all_triangles.size() << " (" << num_found << ") percent of weighted triangles." << endl;
-      }
-
-      if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_triangles.size())) {
-        cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted triangles top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
-        bidx++;
-      }
-    }
-
-    // cerr << "=============================================" << endl;
-    // cerr << "Ranks of top " << k << " triangles" << endl;
-    // cerr << "=============================================" << endl;
-    // for (auto rank : ranks) {
-    // 	cerr << rank << " ";
-    // }
-    // cerr << endl;
-
-    // cerr << "=============================================" << endl;
-    // cerr << "Percentiles of top " << k << " triangles" << endl;
-    // cerr << "=============================================" << endl;
-    // for (auto percentile: percentiles) {
-    // 	cerr << percentile << " ";
-    // }
-    // cerr << endl;
-
-    long double recall = 0.0;
-    for (int i = 0; i < k; i++) {
-      recall += (ranks[i] <= k);
-    }
-    recall /= k;
-    cerr << "=============================================" << endl;
-    cerr << "Recall: " << recall << endl;
-    cerr << "=============================================" << endl;
-
-    // cerr << "=============================================" << endl;
-    // cerr << "Weights of true top " << k << " triangles" << endl;
-    // cerr << "=============================================" << endl;
-    // for (const auto &wt : top_true_weights) {
-    // 	cerr << wt << " ";
-    // }
-    // cerr << endl;
-    // cerr << "=============================================" << endl;
-    // cerr << "Weights of sampled top " << k << " triangles" << endl;
-    // cerr << "=============================================" << endl;
-    // for (const auto &wt : top_sampled_weights) {
-    // 	cerr << wt << " ";
-    // }
-    // cerr << endl;
-
-    cerr << endl;
-  }
 
   void compare_statistics_time(set<weighted_triangle> &all_triangles,
       vector<set<weighted_triangle>> &vec_sampled_triangles, 
