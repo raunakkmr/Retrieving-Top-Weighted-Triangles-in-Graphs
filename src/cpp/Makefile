@@ -22,6 +22,9 @@ compare_deterministic: compare_deterministic.o
 
 compare_sampling: compare_sampling.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+static_heavy_light: static_heavy_light.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 all: $(exe)
 .PHONY: clean
