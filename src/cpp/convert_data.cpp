@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     srand(0);
 
     // auto GS = read_graph(argv[1]);
-    auto GS = read_graph(argv[1], false, true);
+    auto GS = read_graph(argv[1], false, false);
     string dataset_path = argv[2];
 
     Graph G = GS.G;

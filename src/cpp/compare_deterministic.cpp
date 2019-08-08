@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 #endif
 
     auto heavy_light_tri = heavy_light_sampler(GS, K);
-    auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K, false, false);
-    auto auto_thresholded_tri = auto_thresholded_heavy_light(GS, K, false, false);
+    auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);
+    auto auto_thresholded_tri = auto_thresholded_heavy_light(GS, K);
 
     if (CHECK_TRIANGLES) {
         auto all_tris = brute_force_sampler(GS, K);

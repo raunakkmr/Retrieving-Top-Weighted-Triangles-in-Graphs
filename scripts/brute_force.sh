@@ -1,12 +1,13 @@
 #!/bin/bash
 declare -a datasets=(
-    coauth-DBLP
-    coauth-MAG-Geology
-    coauth-MAG-History
-    congress-bills
+    # coauth-DBLP
+    # coauth-MAG-Geology
+    # coauth-MAG-History
+    # congress-bills
     tags-stack-overflow
     threads-math-sx
     threads-stack-overflow
+    wikipedia
 )
 make -C ../src/cpp/ clean
 make -C ../src/cpp/ brute_force_enumerator

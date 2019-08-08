@@ -3,7 +3,7 @@ obj = $(src:.cpp=.o)
 exe = $(src:.cpp=)
 
 LDFLAGS = -fopenmp
-CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall #-D_GLIBCXX_PARALLEL
+CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall -I./ #-D_GLIBCXX_PARALLEL
 
 test_reading: test_reading.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)

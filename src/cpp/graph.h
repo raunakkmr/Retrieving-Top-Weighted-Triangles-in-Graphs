@@ -370,6 +370,7 @@ namespace wsdm_2019_graph {
       }
       cerr << bytes_read << " bytes read" << endl;
     } else {
+      cerr << "non-binary reading mode" << endl;
       if (filename.find("reddit") != string::npos) {
         ifstream edges(filename, ifstream::in);
 
