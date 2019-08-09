@@ -581,6 +581,207 @@ namespace wsdm_2019_graph {
     return counter;
   }
 
+  vector<weighted_triangle> edge_sampler_parallel_time(GraphStruct &GS, int nthreads, double max_time=-1, double inc=-1, bool include_setup=true) {
+    cerr << "=============================================" << endl;
+    cerr << "Running parallel edge sampling for triangles (" << nthreads << " threads)" << endl;
+    cerr << "=============================================" << endl;
+    struct timespec pre_start, pre_finish;
+    double pre_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &pre_start);
+
+    Graph &G = GS.G;
+
+    // build distribution over edges
+    map<int, vector<full_edge>> edge_distribution;
+    for (int u = 0; u < (int) G.size(); u++) {
+      for (const auto &e : G[u]) {
+        int v = e.dst;
+        long long w = e.wt;
+        if (u > v) continue;
+        edge_distribution[e.wt].push_back({u, v, w});
+      }
+    }
+
+    vector<long long> cumulative_weights(edge_distribution.size());
+    vector<long long> index_to_weight(edge_distribution.size());
+    int count = 0;
+    long long prev = 0;
+    for (const auto &kv : edge_distribution) {
+      // cumulative_weights.push_back(kv.second.size() * kv.first);
+      // cumulative_weights[cumulative_weights.size() - 1] += prev;
+      // index_to_weight[count++] = kv.first;
+      // prev = cumulative_weights.back();
+      cumulative_weights[count] = kv.second.size() * kv.first + prev;
+      prev = cumulative_weights[count];
+      index_to_weight[count++] = kv.first;
+    }
+
+    vector<thread> threads(nthreads);
+    vector<vector<weighted_triangle>> counters(nthreads);
+    vector<set<pair<int, int>>> histories(nthreads);
+
+    clock_gettime(CLOCK_MONOTONIC, &pre_finish);
+    pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
+    pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
+
+    cerr << "Pre-processing time: " << pre_elapsed << endl;
+    cerr << "Edge weight classes: " << edge_distribution.size() << endl;
+    cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+
+    struct timespec start, finish;
+    double tot_time;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    double pre_st = 0, st = 0;
+    pre_st = pre_start.tv_sec;
+    pre_st += (pre_start.tv_nsec) / 1000000000.0;
+    st = pre_finish.tv_sec;
+    st += (pre_finish.tv_nsec) / 1000000000.0;
+
+    auto sample_edge = [&](){
+      long long s = rand64() % cumulative_weights.back();
+      int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
+
+      long long weight = index_to_weight[idx];
+      auto &edges = edge_distribution[weight];
+      return edges[rand() % edges.size()];
+    };
+
+    auto terminate = [&]() {
+      struct timespec cur;
+      double tot_time;
+      clock_gettime(CLOCK_MONOTONIC, &cur);
+      if (include_setup) {
+        tot_time = (cur.tv_sec - pre_start.tv_sec);
+        tot_time += (cur.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
+      } else {
+        tot_time = (cur.tv_sec - start.tv_sec);
+        tot_time += (cur.tv_nsec - start.tv_nsec) / 1000000000.0;
+      }
+      return tot_time >= max_time;
+    };
+
+    auto parallel_sampler = [&](int i){
+      while (!terminate()) {
+        auto e = sample_edge();
+        int u = e.src, v = e.dst;
+        long long w = e.wt;
+        bool cont = false;
+        for (int j = 0; j < nthreads; j++) {
+          if (histories[j].count(make_pair(u, v))) {
+            cont = true;
+            break;
+          }
+        }
+        if (cont) continue;
+        histories[i].insert(make_pair(u, v));
+        map<int, long long> vert_to_wt;
+        for (auto eu : G[u]) {
+          vert_to_wt[eu.dst] = eu.wt;
+        }
+
+        for (auto ev : G[v]) {
+          if (vert_to_wt.count(ev.dst)) {
+            counters[i].push_back(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
+          }
+        }
+      }
+      sort(counters[i].begin(), counters[i].end());
+    };
+
+    auto parallel_merger = [&](int i, int j) {
+      vector<weighted_triangle> W;
+      W.reserve(counters[i].size() + counters[j].size());
+      int a = 0, b = 0, Li = counters[i].size(), Lj = counters[j].size();
+      while (a < Li && b < Lj) {
+        if (counters[i][a] < counters[j][b]) {
+          if (counters[i][a] != W.back()) {
+            W.push_back(move(counters[i][a]));
+          }
+          a++;
+        } else if (counters[i][a] == counters[j][b]) {
+          if (counters[i][a] != W.back()) {
+            W.push_back(move(counters[i][a]));
+          }
+          a++;
+          b++;
+        } else {
+          if (counters[j][b] != W.back()) {
+            W.push_back(move(counters[j][b]));
+          }
+          b++;
+        }
+      }
+      while (a < Li) {
+        if (counters[i][a] != W.back()) {
+          W.push_back(move(counters[i][a]));
+        }
+        a++;
+      }
+      while (b < Lj) {
+        if (counters[j][b] != W.back()) {
+          W.push_back(move(counters[j][b]));
+        }
+        b++;
+      }
+      counters[i].swap(W);
+    };
+
+    for (int i = 0; i < nthreads; i++) {
+      thread th(parallel_sampler, i);
+      threads[i] = move(th);
+    }
+    for (int i = 0; i < nthreads; i++) {
+      threads[i].join();
+    }
+
+    struct timespec merge_start, merge_finish;
+    double merge_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &merge_start);
+
+    // Parallel merging.
+
+    int pow2_sz = 1, log2_sz = 0;
+    while (pow2_sz < nthreads) {
+      pow2_sz *= 2;
+      log2_sz++;
+    }
+
+    for (int i = counters.size(); i < pow2_sz; i++) {
+      counters.push_back(vector<weighted_triangle>());
+    }
+
+    vector<thread> merge_threads(pow2_sz);
+    int val = 1;
+    for (int level = 1; level < log2_sz+1; level++) {
+      val *= 2;
+      for (int i = 0; i < (int) counters.size()/val; i++) {
+        thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
+        merge_threads[i*val] = move(merge_th);
+      }
+      for (int i = 0; i < (int) counters.size()/val; i++) {
+        merge_threads[i*val].join();
+      }
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &merge_finish);
+    merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
+    merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
+    cerr << "Merge time: " << merge_elapsed << endl;
+
+    cerr << "Found " << counters[0].size() << " triangles." << endl;
+    if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
+
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    tot_time = (finish.tv_sec - start.tv_sec);
+    tot_time += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+    cerr << "Total Time (s): " << tot_time << endl;
+    // cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+    cerr << endl;
+
+    return counters[0];
+  }
+  
   vector<weighted_triangle> edge_sampler_parallel(GraphStruct &GS, int nsamples, int nthreads) {
     cerr << "=============================================" << endl;
     cerr << "Running parallel edge sampling for triangles (" << nthreads << " threads)" << endl;

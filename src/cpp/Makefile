@@ -25,6 +25,9 @@ compare_sampling: compare_sampling.o
 
 static_heavy_light: static_heavy_light.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+compare_parallel_edge: compare_parallel_edge.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 all: $(exe)
 .PHONY: clean

@@ -3,8 +3,8 @@ import os
 
 files = [
   'congress-bills',
-  'threads-math-sx',
   'tags-stack-overflow',
+  'threads-math-sx',
   'threads-stack-overflow',
   'wikipedia',
   'eth',
