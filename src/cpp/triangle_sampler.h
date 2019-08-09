@@ -5,10 +5,11 @@
 #include <parallel/algorithm>
 
 #include "graph.h"
-#include "sparsehash/dense_hash_map"
-#include "sparsehash/dense_hash_set"
+#include "sparsepp/spp.h"
 
 using namespace std;
+using spp::sparse_hash_set;
+using spp::sparse_hash_map;
 
 namespace wsdm_2019_graph {
 
@@ -1173,7 +1174,7 @@ namespace wsdm_2019_graph {
 
   }
 
-  set<weighted_triangle> adaptive_heavy_light(GraphStruct &GS, int k = 100) {
+  set<weighted_triangle> adaptive_heavy_light(GraphStruct &GS, int k = 100, bool keep_all = false) {
     cerr << "=============================================" << endl;
     cerr << "Running adaptive heavy light for triangles" << endl;
     cerr << "=============================================" << endl;
@@ -1216,6 +1217,7 @@ namespace wsdm_2019_graph {
       // Version where we use a threshold
       auto ei = edges[hi], ej = edges[hj];
       Gh.resize(max(ej.dst+1, (int) Gh.size()));
+      threshold = 2 * ej.wt + ei.wt;
 
       // TODO: COMPUTE THE MAGIC EXPONENT THROUGH SOME THEORY
       // This exponent should be roughly 2 - O(poly(1/beta)), where beta is 
@@ -1226,25 +1228,23 @@ namespace wsdm_2019_graph {
       // This gives a magic range of [1.25, 1.33] which fits with what 
       // we observed.
       double magic = 1.25;
-      if (pow(ej.wt, magic) > ei.wt) {
+      if (hi == hj || pow(ej.wt, magic) >= ei.wt) {
         // Advance j, H2 and H3 cases (at least two heavy)
         // Check for P2s with incoming ej
-
-        for (const auto& e : Gh[ej.src]) {
-          compute_exists_per_node(e.dst);
-        }
-        for (const auto& e : Gh[ej.dst]) {
-          compute_exists_per_node(e.dst);
-        }
+        compute_exists_per_node(ej.src);
+        compute_exists_per_node(ej.dst);
 
         for (const auto& e : Gh[ej.src]) {
           if (exists[e.dst].count(ej.dst)) {
-            long long weight = ej.wt + e.wt + exists[ej.dst][e.dst];
+            long long weight = ej.wt + e.wt + exists[e.dst][ej.dst];
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1252,12 +1252,15 @@ namespace wsdm_2019_graph {
 
         for (const auto& e : Gh[ej.dst]) {
           if (exists[e.dst].count(ej.src)) {
-            long long weight = ej.wt + e.wt + exists[ej.src][e.dst];
-            weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+            long long weight = ej.wt + e.wt + exists[e.dst][ej.src];
+            weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1274,7 +1277,10 @@ namespace wsdm_2019_graph {
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1294,9 +1300,6 @@ namespace wsdm_2019_graph {
         Gh[ej.dst].push_back({ej.src, ej.wt});
       } else {
         // Advance i, H1 case (exactly 1 heavy)
-        compute_exists_per_node(ei.src);
-        compute_exists_per_node(ei.dst);
-
         for (const auto& kv : exists[ei.src]) {
           vert_to_wt[kv.first] = kv.second;
         }
@@ -1307,7 +1310,10 @@ namespace wsdm_2019_graph {
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1318,7 +1324,6 @@ namespace wsdm_2019_graph {
         hi++;
       }
       
-      threshold = 2 * ej.wt + ei.wt - 1;
       while (curr != counter.end() && curr->weight >= threshold) {
         topk.insert(*curr);
         auto prev = curr;
@@ -1344,13 +1349,18 @@ namespace wsdm_2019_graph {
     cerr << "Total Time (s): " << tot_time << endl;
     cerr << endl;
 
+    // Augment topk with curr if returning as many as we want
+    if (keep_all) {
+      for (const auto& T : counter) {
+        topk.insert(T);
+      }
+    }
     return topk;
-
   }
 
   // Same as adaptive heavy light EXCEPT the magic 
   // constant is computed on the fly automatically
-  set<weighted_triangle> auto_thresholded_heavy_light(GraphStruct &GS, int k = 100, bool keep_all = true) {
+  set<weighted_triangle> auto_thresholded_heavy_light(GraphStruct &GS, int k = 100, bool keep_all = false) {
     cerr << "=============================================" << endl;
     cerr << "Running auto thresholded heavy light for triangles" << endl;
     cerr << "=============================================" << endl;
@@ -1372,7 +1382,6 @@ namespace wsdm_2019_graph {
 
     Graph Gh;
     int hi = 0, hj = 0;
-    // double threshold = numeric_limits<double>::max();
     long long threshold = numeric_limits<long long>::max();
     counter.insert(weighted_triangle(0, 0, 0, threshold));
     auto curr = counter.begin();
@@ -1405,43 +1414,48 @@ namespace wsdm_2019_graph {
       // Version where we use a threshold
       auto ei = edges[hi], ej = edges[hj];
       Gh.resize(max(ej.dst+1, (int) Gh.size()));
+      threshold = 2 * ej.wt + ei.wt;
 
       delta_ei = double(ei.wt - edges[edge_i_right].wt) / (edge_i_right - edge_i_left);
       delta_ej = double(ej.wt - edges[edge_j_right].wt) / (edge_j_right - edge_j_left);
-      ei_cost = exists[ei.src].size() + exists[ei.dst].size();
-      ej_cost = 2 * (Gh[ej.src].size() + Gh[ej.dst].size());
+      ei_cost = exists[ei.src].size() + exists[ei.dst].size() + 1;
+      ej_cost = Gh[ej.src].size() + Gh[ej.dst].size() 
+              + G[ej.src].size() + G[ej.dst].size()
+              - exists[ej.src].size() - exists[ej.dst].size();
 
-      if (delta_ej  * ei_cost > delta_ei * ej_cost) {
+      if (hj == hi || delta_ej  * ei_cost >= delta_ei * ej_cost) {
         // Advance j, H2 and H3 cases (at least two heavy)
         // Check for P2s with incoming ej
-        for (const auto& e : Gh[ej.src]) {
-          compute_exists_per_node(e.dst);
-        }
-        for (const auto& e : Gh[ej.dst]) {
-          compute_exists_per_node(e.dst);
-        }
-        
+        compute_exists_per_node(ej.src);
+        compute_exists_per_node(ej.dst);
 
         for (const auto& e : Gh[ej.src]) {
           if (exists[e.dst].count(ej.dst)) {
-            long long weight = ej.wt + e.wt + exists[ej.dst][e.dst];
+            long long weight = ej.wt + e.wt + exists[e.dst][ej.dst];
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
         }
+
         for (const auto& e : Gh[ej.dst]) {
           if (exists[e.dst].count(ej.src)) {
-            long long weight = ej.wt + e.wt + exists[ej.src][e.dst];
-            weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+            long long weight = ej.wt + e.wt + exists[e.dst][ej.src];
+            weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1458,7 +1472,10 @@ namespace wsdm_2019_graph {
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1478,9 +1495,6 @@ namespace wsdm_2019_graph {
         Gh[ej.dst].push_back({ej.src, ej.wt});
       } else {
         // Advance i, H1 case (exactly 1 heavy)
-        compute_exists_per_node(ei.src);
-        compute_exists_per_node(ei.dst);
-
         for (const auto& kv : exists[ei.src]) {
           vert_to_wt[kv.first] = kv.second;
         }
@@ -1491,7 +1505,10 @@ namespace wsdm_2019_graph {
             if (weight >= threshold) {
               topk.insert(T);
             } else {
-              counter.insert(T);
+              auto it = counter.insert(T).first;
+              if (*it < *curr) {
+                curr = it;
+              }
             }
             num_tris++;
           }
@@ -1502,7 +1519,6 @@ namespace wsdm_2019_graph {
         hi++;
       }
       
-      threshold = 2 * ej.wt + ei.wt - 1;
       while (curr != counter.end() && curr->weight >= threshold) {
         topk.insert(*curr);
         auto prev = curr;
@@ -1528,6 +1544,11 @@ namespace wsdm_2019_graph {
     cerr << "Total Time (s): " << tot_time << endl;
     cerr << endl;
 
+    if (keep_all) {
+      for (const auto& T : counter) {
+        topk.insert(T);
+      }
+    }
     return topk;
 
   }
