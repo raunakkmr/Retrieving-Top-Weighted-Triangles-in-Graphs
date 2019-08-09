@@ -48,14 +48,14 @@ int main(int argc, char* argv[]) {
     auto path_sampling_times = res.second;
 
     if (CHECK_TRIANGLES) {
-        auto all_tris = brute_force_sampler(GS);
+        auto all_tris = brute_force_sampler(GS, K);
         // auto all_tris = read_all_triangles_set(tri_file);
         cerr << "*** Comparing edge sampling ***" << endl;
-        compare_statistics_time(all_tris, edge_sampling_tri, edge_sampling_times, K);
+        compare_statistics_time(all_tris, edge_sampling_tri, edge_sampling_times, K, true);
         cerr << "*** Comparing wedge sampling ***" << endl;
-        compare_statistics_time(all_tris, wedge_sampling_tri, wedge_sampling_times, K);
+        compare_statistics_time(all_tris, wedge_sampling_tri, wedge_sampling_times, K, true);
         cerr << "*** Comparing path sampling ***" << endl;
-        compare_statistics_time(all_tris, path_sampling_tri, path_sampling_times, K);
+        compare_statistics_time(all_tris, path_sampling_tri, path_sampling_times, K, true);
 
         Graph &G = GS.G;
 
