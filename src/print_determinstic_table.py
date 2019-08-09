@@ -19,7 +19,7 @@ parser.add_argument('-k')
 args = parser.parse_args()
 
 for fname in files:
-  path = os.path.join(os.getcwd(), 'compare_deterministic_{}'.format(args.k), fname)
+  path = os.path.join('../output/compare_deterministic_{}'.format(args.k), fname)
   with open(path, 'r') as f:
     lines = f.readlines()
     sort_time = float(lines[7].split()[-1])
@@ -46,8 +46,10 @@ for fname in files:
     else:
       row += '  '
     if fname != 'spotify':
-      row += '{:>25} & {:10.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} \\\\'.format(fname, brute_time, static_time, dynamic_time, auto_time, static_acc)
+      # row += '{:>25} & {:10.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} \\\\'.format(fname, brute_time, static_time, dynamic_time, auto_time, static_acc)
+      row += '{:>25} & {:10.3f} & {:7.3f} & {:7.3f} & {:7.3f} \\\\'.format(fname, brute_time, static_time, dynamic_time, static_acc)
     else:
-      row += '{:>25} & {:>10} & {:7.3f} & {:7.3f} & {:7.3f} & {:7} \\\\'.format(fname, brute_time, static_time, dynamic_time, auto_time, static_acc)
+      # row += '{:>25} & {:>10} & {:7.3f} & {:7.3f} & {:7.3f} & {:7} \\\\'.format(fname, brute_time, static_time, dynamic_time, auto_time, static_acc)
+      row += '{:>25} & {:>10} & {:7.3f} & {:7.3f} & {:7} \\\\'.format(fname, brute_time, static_time, dynamic_time, static_acc)
 
     print(row)
