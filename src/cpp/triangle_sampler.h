@@ -988,11 +988,11 @@ namespace wsdm_2019_graph {
     double pre_st = clock();
 
     Graph &G = GS.G;
-    vector<full_edge> &edges = GS.edges;
-    vector<unordered_set<int>> deleted(G.size());
+    const vector<full_edge> &edges = GS.edges;
     vector<unordered_map<int, long long>> exists(G.size());
     vector<long long> vert_to_wt(G.size());
     vector<bool> computed(G.size());
+    vector<set<int>> deleted(G.size());
 
     cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 
@@ -1019,10 +1019,20 @@ namespace wsdm_2019_graph {
       }
     };
 
+    auto search = [&](int u, int v) {
+      if (G[u].size() > G[v].size()) swap(u, v);
+      if (deleted[u].count(v)) return 0LL;
+      if (exists[u].count(v)) return exists[u][v];
+      for (const auto& e : G[u]) {
+        if (e.dst == v) return e.wt;
+      }
+      return 0LL;
+    };
+
     while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
       // Version where we use a threshold
       auto ei = edges[hi], ej = edges[hj];
-      Gh.resize(max(ej.dst+1, (int) Gh.size()));
+      Gh.resize(max(ej.dst+1, (int) Gh.size())); 
       threshold = 2 * ej.wt + ei.wt;
 
       // TODO: COMPUTE THE MAGIC EXPONENT THROUGH SOME THEORY
@@ -1037,12 +1047,11 @@ namespace wsdm_2019_graph {
       if (hi == hj || pow(ej.wt, magic) >= ei.wt) {
         // Advance j, H2 and H3 cases (at least two heavy)
         // Check for P2s with incoming ej
-        compute_exists_per_node(ej.src);
-        compute_exists_per_node(ej.dst);
 
         for (const auto& e : Gh[ej.src]) {
-          if (exists[e.dst].count(ej.dst)) {
-            long long weight = ej.wt + e.wt + exists[e.dst][ej.dst];
+          long long wt = search(e.dst, ej.dst);
+          if (wt) {
+            long long weight = ej.wt + e.wt + wt;
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
@@ -1057,8 +1066,9 @@ namespace wsdm_2019_graph {
         }
 
         for (const auto& e : Gh[ej.dst]) {
-          if (exists[e.dst].count(ej.src)) {
-            long long weight = ej.wt + e.wt + exists[e.dst][ej.src];
+          long long wt = search(e.dst, ej.src);
+          if (wt) {
+            long long weight = ej.wt + e.wt + wt;
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
@@ -1096,16 +1106,16 @@ namespace wsdm_2019_graph {
         }
 
         // Remove from light edges
-        exists[ej.src].erase(ej.dst);
-        exists[ej.dst].erase(ej.src);
-        deleted[ej.src].insert(ej.dst);
-        deleted[ej.dst].insert(ej.src);
         hj++;
 
+        deleted[ej.src].insert(ej.dst);
+        deleted[ej.dst].insert(ej.src);
         Gh[ej.src].push_back({ej.dst, ej.wt});
         Gh[ej.dst].push_back({ej.src, ej.wt});
       } else {
         // Advance i, H1 case (exactly 1 heavy)
+        compute_exists_per_node(ei.src);
+        compute_exists_per_node(ei.dst);
         for (const auto& kv : exists[ei.src]) {
           vert_to_wt[kv.first] = kv.second;
         }
@@ -1174,10 +1184,10 @@ namespace wsdm_2019_graph {
     double pre_st = clock();
 
     Graph &G = GS.G;
-    vector<full_edge> &edges = GS.edges;
-    vector<unordered_set<int>> deleted(G.size());
+    const vector<full_edge> &edges = GS.edges;
     vector<unordered_map<int, long long>> exists(G.size());
     vector<long long> vert_to_wt(G.size());
+    vector<set<int>> deleted(G.size());
     vector<bool> computed(G.size());
 
     cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
@@ -1205,6 +1215,16 @@ namespace wsdm_2019_graph {
       }
     };
 
+    auto search = [&](int u, int v) {
+      if (G[u].size() > G[v].size()) swap(u, v);
+      if (deleted[u].count(v)) return 0LL;
+      if (exists[u].count(v)) return exists[u][v];
+      for (const auto& e : G[u]) {
+        if (e.dst == v) return e.wt;
+      }
+      return 0LL;
+    };
+
     int edge_i_left = 0, edge_i_right = 0;
     int edge_j_left = 0, edge_j_right = 0;
     auto move_ptrs = [&](int& l, int& r, int i) {
@@ -1224,20 +1244,19 @@ namespace wsdm_2019_graph {
 
       delta_ei = double(ei.wt - edges[edge_i_right].wt) / (edge_i_right - edge_i_left);
       delta_ej = double(ej.wt - edges[edge_j_right].wt) / (edge_j_right - edge_j_left);
-      ei_cost = exists[ei.src].size() + exists[ei.dst].size() + 1;
-      ej_cost = Gh[ej.src].size() + Gh[ej.dst].size() 
+      ei_cost = exists[ei.src].size() + exists[ei.dst].size() + 1 
               + G[ej.src].size() + G[ej.dst].size()
               - exists[ej.src].size() - exists[ej.dst].size();
+      ej_cost = Gh[ej.src].size() + Gh[ej.dst].size();
 
       if (hj == hi || delta_ej  * ei_cost >= delta_ei * ej_cost) {
         // Advance j, H2 and H3 cases (at least two heavy)
         // Check for P2s with incoming ej
-        compute_exists_per_node(ej.src);
-        compute_exists_per_node(ej.dst);
 
         for (const auto& e : Gh[ej.src]) {
-          if (exists[e.dst].count(ej.dst)) {
-            long long weight = ej.wt + e.wt + exists[e.dst][ej.dst];
+          long long wt = search(e.dst, ej.dst);
+          if (wt) {
+            long long weight = ej.wt + e.wt + wt;
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
@@ -1252,8 +1271,9 @@ namespace wsdm_2019_graph {
         }
 
         for (const auto& e : Gh[ej.dst]) {
-          if (exists[e.dst].count(ej.src)) {
-            long long weight = ej.wt + e.wt + exists[e.dst][ej.src];
+          long long wt = search(e.dst, ej.src);
+          if (wt) {
+            long long weight = ej.wt + e.wt + wt;
             weighted_triangle T(e.dst, ej.dst, ej.src, weight);
             if (weight >= threshold) {
               topk.insert(T);
@@ -1291,16 +1311,16 @@ namespace wsdm_2019_graph {
         }
 
         // Remove from light edges
-        exists[ej.src].erase(ej.dst);
-        exists[ej.dst].erase(ej.src);
-        deleted[ej.src].insert(ej.dst);
-        deleted[ej.dst].insert(ej.src);
         hj++;
 
+        deleted[ej.src].insert(ej.dst);
+        deleted[ej.dst].insert(ej.src);
         Gh[ej.src].push_back({ej.dst, ej.wt});
         Gh[ej.dst].push_back({ej.src, ej.wt});
       } else {
         // Advance i, H1 case (exactly 1 heavy)
+        compute_exists_per_node(ei.src);
+        compute_exists_per_node(ei.dst);
         for (const auto& kv : exists[ei.src]) {
           vert_to_wt[kv.first] = kv.second;
         }
@@ -1337,6 +1357,7 @@ namespace wsdm_2019_graph {
         curr--;
       }
     }
+
     // Removing the dummy triangle of weight INF. There should be one
     // in topk as well. So topk actually has one fewer triangle than it reports.
     counter.erase(counter.begin());
