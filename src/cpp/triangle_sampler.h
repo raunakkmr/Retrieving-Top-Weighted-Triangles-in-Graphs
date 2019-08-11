@@ -192,7 +192,7 @@ namespace wsdm_2019_graph {
 
     auto sample_single_edge = [&](){
       long long s = rand64() % total_edge_weight;
-      int index = lower_bound(weight_value.begin(), weight_value.end(), s) - weight_value.begin();
+      int index = upper_bound(weight_value.begin(), weight_value.end(), s) - weight_value.begin() - 1;
       int e = rand() % (weight_index[index+1] - weight_index[index]);
       return edges[e + weight_index[index]];
     };
@@ -610,7 +610,7 @@ namespace wsdm_2019_graph {
 
     auto sample_single_edge = [&](){
       long long s = rand64() % total_edge_weight;
-      int index = lower_bound(weight_value.begin(), weight_value.end(), s) - weight_value.begin();
+      int index = upper_bound(weight_value.begin(), weight_value.end(), s) - weight_value.begin() - 1;
       int e = rand() % (weight_index[index+1] - weight_index[index]);
       return edges[e + weight_index[index]];
     };
