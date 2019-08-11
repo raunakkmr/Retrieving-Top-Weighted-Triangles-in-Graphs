@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     string tri_file = argv[2];
     int CHECK_TRIANGLES = atoi(argv[3]);
     int K = atoi(argv[4]);
-    double START_TIME = atoi(argv[5]);
+    double START_TIME = atof(argv[5]);
     double MAX_TIME = atof(argv[6]);
     double INC = atof(argv[7]);
     string sampler = argv[8];  // E or W (edge or wedge)

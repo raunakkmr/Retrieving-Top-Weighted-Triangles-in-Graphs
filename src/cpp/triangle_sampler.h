@@ -304,15 +304,15 @@ namespace wsdm_2019_graph {
     // build an adjacency matrix where a(i, j) = weight of edge (i, j)
     // TODO: maybe we should lift this out of the functions and make a more general graph structure
     // vector<unordered_map<int, long long>> weight(G.size());
-    vector<google::dense_hash_map<int, long long>> weight(G.size());
-    for (int u = 0; u < (int) G.size(); u++) {
-      weight[u].set_empty_key(-1);
-      for (const auto &e : G[u]) {
-        int v = e.dst;
-        long long w = e.wt;
-        weight[u][v] = w;
-      }
-    }
+    // vector<google::dense_hash_map<int, long long>> weight(G.size());
+    // for (int u = 0; u < (int) G.size(); u++) {
+    //   weight[u].set_empty_key(-1);
+    //   for (const auto &e : G[u]) {
+    //     int v = e.dst;
+    //     long long w = e.wt;
+    //     weight[u][v] = w;
+    //   }
+    // }
     cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 
     double st = clock();
@@ -373,6 +373,16 @@ namespace wsdm_2019_graph {
       if (ev.dst == ew.dst) continue;
       nsamples++;
 
+      for (const auto &e : G[ev.dst]) {
+        if (e.dst == ew.dst) {
+          auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
+          if (history.count(tri) == 0) {
+            history.insert(tri);
+            counter.insert(tri);
+          }
+        }
+      }
+      /*
       if (weight[ev.dst].count(ew.dst)) {
         // todo: replace with p means
         auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + weight[ev.dst][ew.dst]);
@@ -381,6 +391,7 @@ namespace wsdm_2019_graph {
           counter.insert(tri);
         }
       }
+      */
     }
 
 
@@ -801,15 +812,15 @@ namespace wsdm_2019_graph {
     // build an adjacency matrix where a(i, j) = weight of edge (i, j)
     // TODO: maybe we should lift this out of the functions and make a more general graph structure
     // vector<unordered_map<int, long long>> weight(G.size());
-    vector<google::dense_hash_map<int, long long>> weight(G.size());
-    for (int u = 0; u < (int) G.size(); u++) {
-      weight[u].set_empty_key(-1);
-      for (const auto &e : G[u]) {
-        int v = e.dst;
-        long long w = e.wt;
-        weight[u][v] = w;
-      }
-    }
+    // vector<google::dense_hash_map<int, long long>> weight(G.size());
+    // for (int u = 0; u < (int) G.size(); u++) {
+    //   weight[u].set_empty_key(-1);
+    //   for (const auto &e : G[u]) {
+    //     int v = e.dst;
+    //     long long w = e.wt;
+    //     weight[u][v] = w;
+    //   }
+    // }
 
     vector<thread> threads(nthreads);
     vector<vector<weighted_triangle>> counters(nthreads);
@@ -876,6 +887,23 @@ namespace wsdm_2019_graph {
         if (ev.dst == ew.dst) continue;
         nsamples_++;
 
+        for (const auto &e : G[ev.dst]) {
+          if (e.dst == ew.dst) {
+            auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
+            bool cont = false;
+            for (int j = 0; j < nthreads; j++) {
+              if (histories[j].count(tri)) {
+                cont = true;
+                break;
+              }
+            }
+            if (cont) continue;
+            histories[i].insert(tri);
+            counters[i].push_back(tri);
+            break;
+          }
+        }
+        /*
         if (weight[ev.dst].count(ew.dst)) {
           // todo: replace with p means
           auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + weight[ev.dst][ew.dst]);
@@ -891,6 +919,7 @@ namespace wsdm_2019_graph {
           histories[i].insert(tri);
           counters[i].push_back(tri);
         }
+        */
       }
       sort(counters[i].begin(), counters[i].end());
     };
