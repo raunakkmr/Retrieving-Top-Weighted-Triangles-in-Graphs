@@ -515,33 +515,31 @@ namespace wsdm_2019_graph {
     clock_gettime(CLOCK_MONOTONIC, &pre_start);
 
     Graph &G = GS.G;
-
-    // build distribution over edges
-    // map<int, vector<full_edge>> edge_distribution;
-    google::dense_hash_map<int, vector<full_edge>> edge_distribution;
-    edge_distribution.set_empty_key(-1);
-    for (int u = 0; u < (int) G.size(); u++) {
-      for (const auto &e : G[u]) {
-        int v = e.dst;
-        long long w = e.wt;
-        if (u > v) continue;
-        edge_distribution[e.wt].push_back({u, v, w});
+    const vector<full_edge>& edges = GS.edges;
+    long long total_edge_weight = 0;
+    vector<int> weight_index;
+    //vector<long long> weight_value;
+    int cur = 0;
+    while (cur < (int) edges.size()) {
+      weight_index.push_back(cur);
+      //weight_value.push_back(total_edge_weight);
+      long long cur_wt = edges[cur].wt;
+      int nsteps = 5, found = 0;
+      while (nsteps--) {
+        cur++;
+        if (edges[cur].wt < cur_wt) {
+          found = 1;
+          break;
+        }
       }
-    }
 
-    vector<long long> cumulative_weights(edge_distribution.size());
-    vector<long long> index_to_weight(edge_distribution.size());
-    int count = 0;
-    long long prev = 0;
-    for (const auto &kv : edge_distribution) {
-      // cumulative_weights.push_back(kv.second.size() * kv.first);
-      // cumulative_weights[cumulative_weights.size() - 1] += prev;
-      // index_to_weight[count++] = kv.first;
-      // prev = cumulative_weights.back();
-      cumulative_weights[count] = kv.second.size() * kv.first + prev;
-      prev = cumulative_weights[count];
-      index_to_weight[count++] = kv.first;
+      if (!found) {
+        cur = edges.rend() - lower_bound(edges.rbegin(), edges.rend() - cur, full_edge(0, 0, cur_wt));
+      }
+      total_edge_weight += (cur - weight_index.back()) * cur_wt;
     }
+    weight_index.push_back(cur);
+    //weight_value.push_back(total_edge_weight);
 
     vector<thread> threads(nthreads);
     vector<vector<weighted_triangle>> counters(nthreads);
@@ -553,20 +551,33 @@ namespace wsdm_2019_graph {
     pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
 
     cerr << "Pre-processing time: " << pre_elapsed << endl;
-    cerr << "Edge weight classes: " << edge_distribution.size() << endl;
-    cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+    cerr << "Edge weight classes: " << int(weight_index.size())-1 << endl;
+    cerr << "Total edge weight: " << total_edge_weight << endl;
 
     struct timespec start, finish;
     double tot_time;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    auto sample_edge = [&](){
-      long long s = rand64() % cumulative_weights.back();
-      int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
+    auto sample_edges = [&](int num_samples){
+      vector<int> sample_index(num_samples);
+      vector<long long> sample_numbers(num_samples);
+      for (int i = 0; i < num_samples; i++) {
+        long long s = rand64() % total_edge_weight;
+        sample_numbers[i] = s;
+      }
 
-      long long weight = index_to_weight[idx];
-      auto &edges = edge_distribution[weight];
-      return edges[rand() % edges.size()];
+      long long cur_weight = 0;
+      int j = 0;
+      for (int i = 0; i < int(weight_index.size()) - 1; i++) {
+        cur_weight += (weight_index[i+1] - weight_index[i]) * edges[weight_index[i]].wt;
+        while (j < num_samples && sample_numbers[j] <= cur_weight) {
+          int e = rand() % (weight_index[i+1] - weight_index[i]);
+          sample_index[j] = e + weight_index[i];
+          j++;
+        }
+        if (j == num_samples) break;
+      }
+      return sample_index;
     };
 
     auto terminate = [&](int nsamples_) {
@@ -587,10 +598,16 @@ namespace wsdm_2019_graph {
       }
     };
 
-    auto parallel_sampler = [&](int i){
-      int nsamples_ = 0;
+    auto parallel_sampler = [&](int i) {
+      vector<int> sample_index;
+      if (max_samples != -1) {
+        sample_index = sample_edges(max_samples);
+      } else {
+        sample_index = sample_edges(min(100000, (int) edges.size() / nthreads));
+      }
+      int nsamples_ = 0, total_samples = 0;
       while (!terminate(nsamples_)) {
-        auto e = sample_edge();
+        auto e = edges[sample_index[nsamples_]];
         nsamples_++;
         int u = e.src, v = e.dst;
         long long w = e.wt;
@@ -603,7 +620,7 @@ namespace wsdm_2019_graph {
         }
         if (cont) continue;
         histories[i].insert(make_pair(u, v));
-        map<int, long long> vert_to_wt;
+        unordered_map<int, long long> vert_to_wt;
         for (const auto &eu : G[u]) {
           vert_to_wt[eu.dst] = eu.wt;
         }
@@ -613,8 +630,16 @@ namespace wsdm_2019_graph {
             counters[i].push_back(weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w));
           }
         }
+
+        if (nsamples_ >= (int) sample_index.size()) {
+          sample_index = sample_edges(min(100000, (int) edges.size() / nthreads));
+          nsamples_ = 0;
+          total_samples += nsamples_;
+        }
       }
+      total_samples += nsamples_;
       sort(counters[i].begin(), counters[i].end());
+      cerr << "Total samples on thread " << i << ": " << total_samples << endl;
     };
 
     auto parallel_merger = [&](int i, int j) {
