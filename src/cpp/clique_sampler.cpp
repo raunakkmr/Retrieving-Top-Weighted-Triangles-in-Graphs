@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
 
     int nthreads = thread::hardware_concurrency();
 
-    auto edge_sampling_tri = edge_sampler(GS, NUM_SAMPLES_EDGE);
-    auto edge_sampling_tri_parallel = edge_sampler_parallel(GS, NUM_SAMPLES_EDGE, nthreads);
+    auto edge_sampling_tri = edge_samples_version(GS, NUM_SAMPLES_EDGE);
+    auto edge_sampling_tri_parallel = edge_parallel_samples_version(GS, nthreads, NUM_SAMPLES_EDGE);
     // auto wedge_sampling_tri = wedge_sampler(GS, NUM_SAMPLES_WEDGE);
     // auto path_sampling_tri = path_sampler(GS, NUM_SAMPLES_PATH);
     // auto heavy_light_sampling_tri = heavy_light_sampler(GS, 0.05);
@@ -62,8 +62,9 @@ int main(int argc, char* argv[]) {
     // auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, K);
 
     if (CLIQUE_SIZE > 1) {
-        auto sampled_cliques = clique_sampler(GS.G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
-        auto sampled_cliques_parallel = clique_sampler_parallel(GS.G, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE, nthreads);
+        auto sampled_cliques = clique_sampler(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
+        auto sampled_cliques_parallel = clique_sampler_parallel(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE, nthreads);
+        auto all_cliques = clique_brute_force(GS.G, CLIQUE_SIZE);
     }
     return 0;
 }
