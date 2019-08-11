@@ -146,7 +146,7 @@ namespace wsdm_2019_graph {
       weight_value.push_back(total_edge_weight);
       long long cur_wt = edges[cur].wt;
       int nsteps = 5, found = 0;
-      while (nsteps--) {
+      while (cur < (int) edges.size() && nsteps--) {
         cur++;
         if (edges[cur].wt < cur_wt) {
           found = 1;
@@ -155,7 +155,7 @@ namespace wsdm_2019_graph {
       }
 
       if (!found) {
-        cur = edges.rend() - lower_bound(edges.rbegin(), edges.rend() - cur, full_edge(0, 0, cur_wt));
+        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
       }
       total_edge_weight += (cur - weight_index.back()) * cur_wt;
     }
@@ -553,7 +553,7 @@ namespace wsdm_2019_graph {
       weight_value.push_back(total_edge_weight);
       long long cur_wt = edges[cur].wt;
       int nsteps = 5, found = 0;
-      while (nsteps--) {
+      while (cur < (int) edges.size() && nsteps--) {
         cur++;
         if (edges[cur].wt < cur_wt) {
           found = 1;
@@ -562,7 +562,7 @@ namespace wsdm_2019_graph {
       }
 
       if (!found) {
-        cur = edges.rend() - lower_bound(edges.rbegin(), edges.rend() - cur, full_edge(0, 0, cur_wt));
+        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
       }
       total_edge_weight += (cur - weight_index.back()) * cur_wt;
     }

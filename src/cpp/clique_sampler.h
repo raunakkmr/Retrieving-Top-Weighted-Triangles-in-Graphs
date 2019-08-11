@@ -130,7 +130,7 @@ namespace wsdm_2019_graph {
         double st = clock();
 
         vector<weighted_clique> cliques = enumerate_cliques(G, k);
-        // Min clique is actually max weightls
+        // Min clique is actually max weight
         auto max_clique = min_element(cliques.begin(), cliques.end());
         double tot_time = (clock() - st) / CLOCKS_PER_SEC;
 
@@ -151,21 +151,21 @@ namespace wsdm_2019_graph {
         const vector<full_edge>& edges = GS.edges;
         long long total_edge_weight = 0;
         vector<int> weight_index;
-        vector<long long> weight_value;
         int cur = 0;
         while (cur < (int) edges.size()) {
           weight_index.push_back(cur);
           long long cur_wt = edges[cur].wt;
           int nsteps = 5, found = 0;
-          while (nsteps--) {
+          while (cur < (int) edges.size() && nsteps--) {
             cur++;
             if (edges[cur].wt < cur_wt) {
               found = 1;
               break;
             }
           }
+
           if (!found) {
-            cur = edges.rend() - lower_bound(edges.rbegin(), edges.rend() - cur, full_edge(0, 0, cur_wt));
+            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
           }
           total_edge_weight += (cur - weight_index.back()) * cur_wt;
         }
@@ -321,7 +321,7 @@ namespace wsdm_2019_graph {
           weight_index.push_back(cur);
           long long cur_wt = edges[cur].wt;
           int nsteps = 5, found = 0;
-          while (nsteps--) {
+          while (cur < (int) edges.size() && nsteps--) {
             cur++;
             if (edges[cur].wt < cur_wt) {
               found = 1;
@@ -330,7 +330,7 @@ namespace wsdm_2019_graph {
           }
 
           if (!found) {
-            cur = edges.rend() - lower_bound(edges.rbegin(), edges.rend() - cur, full_edge(0, 0, cur_wt));
+            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
           }
           total_edge_weight += (cur - weight_index.back()) * cur_wt;
         }
