@@ -143,7 +143,6 @@ namespace wsdm_2019_graph {
     int cur = 0;
     while (cur < (int) edges.size()) {
       weight_index.push_back(cur);
-      weight_value.push_back(total_edge_weight);
       long long cur_wt = edges[cur].wt;
       int nsteps = 5, found = 0;
       while (cur < (int) edges.size() && nsteps--) {
@@ -155,12 +154,12 @@ namespace wsdm_2019_graph {
       }
 
       if (!found) {
-        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
+        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
       }
       total_edge_weight += (cur - weight_index.back()) * cur_wt;
+      weight_value.push_back(total_edge_weight);
     }
     weight_index.push_back(cur);
-    weight_value.push_back(total_edge_weight);
 
     cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
     cerr << "Edge weight classes: " << int(weight_index.size())-1 << endl;
@@ -550,7 +549,6 @@ namespace wsdm_2019_graph {
     int cur = 0;
     while (cur < (int) edges.size()) {
       weight_index.push_back(cur);
-      weight_value.push_back(total_edge_weight);
       long long cur_wt = edges[cur].wt;
       int nsteps = 5, found = 0;
       while (cur < (int) edges.size() && nsteps--) {
@@ -562,12 +560,12 @@ namespace wsdm_2019_graph {
       }
 
       if (!found) {
-        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
+        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
       }
       total_edge_weight += (cur - weight_index.back()) * cur_wt;
+      weight_value.push_back(total_edge_weight);
     }
     weight_index.push_back(cur);
-    weight_value.push_back(total_edge_weight);
 
     vector<thread> threads(nthreads);
     vector<vector<weighted_triangle>> counters(nthreads);

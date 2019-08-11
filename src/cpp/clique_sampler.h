@@ -165,7 +165,7 @@ namespace wsdm_2019_graph {
           }
 
           if (!found) {
-            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
+            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
           }
           total_edge_weight += (cur - weight_index.back()) * cur_wt;
         }
@@ -214,7 +214,6 @@ namespace wsdm_2019_graph {
 
             long long w = sample.wt;
             if (history.count(make_pair(u, v))) {
-                //cerr << "RESAMPLED!!" << endl;
                 continue;
             }
             history.insert(make_pair(u, v));
@@ -330,7 +329,7 @@ namespace wsdm_2019_graph {
           }
 
           if (!found) {
-            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt)) - edges.begin();
+            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
           }
           total_edge_weight += (cur - weight_index.back()) * cur_wt;
         }
