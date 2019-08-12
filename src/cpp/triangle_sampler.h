@@ -284,6 +284,8 @@ namespace wsdm_2019_graph {
     // todo: replace this with p means
     for (int i = 0; i < (int) G.size(); i++) {
       long long vertex_weight = 0;
+      vertex_cumulative_weights_1[i].reserve(G[i].size());
+      vertex_cumulative_weights_2[i].reserve(G[i].size());
       for (const auto &e : G[i]) {
         vertex_weight += e.wt;
         vertex_cumulative_weights_2[i].push_back(vertex_weight);
@@ -790,8 +792,14 @@ namespace wsdm_2019_graph {
     vector<vector<long long>> vertex_cumulative_weights_2(G.size());
     long long prev = 0;
     // todo: replace this with p means
+    omp_set_num_threads(thread::hardware_concurrency());
+    //omp_set_nested(1);
+
+    #pragma omp parallel for
     for (int i = 0; i < (int) G.size(); i++) {
       long long vertex_weight = 0;
+      vertex_cumulative_weights_1[i].reserve(G[i].size());
+      vertex_cumulative_weights_2[i].reserve(G[i].size());
       for (const auto &e : G[i]) {
         vertex_weight += e.wt;
         vertex_cumulative_weights_2[i].push_back(vertex_weight);
