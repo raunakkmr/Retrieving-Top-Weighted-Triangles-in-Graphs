@@ -11,9 +11,10 @@ declare -a datasets=(
 )
 
 declare -a kvals=(
-    25
+#     25
     1000
-    40000
+#     40000
+    100000
 )
 
 make -C ../src/cpp clean
