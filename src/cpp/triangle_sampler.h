@@ -836,7 +836,6 @@ namespace wsdm_2019_graph {
 
     vector<thread> threads(nthreads);
     vector<vector<weighted_triangle>> counters(nthreads);
-    vector<set<weighted_triangle>> histories(nthreads);
     int nsamples_per_thread = ceil(max_samples / nthreads);
 
     clock_gettime(CLOCK_MONOTONIC, &pre_finish);
@@ -906,15 +905,6 @@ namespace wsdm_2019_graph {
         for (const auto &e : G[ev.dst]) {
           if (e.dst == ew.dst) {
             auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
-            bool cont = false;
-            for (int j = 0; j < nthreads; j++) {
-              if (histories[j].count(tri)) {
-                cont = true;
-                break;
-              }
-            }
-            if (cont) continue;
-            histories[i].insert(tri);
             counters[i].push_back(tri);
             break;
           }
