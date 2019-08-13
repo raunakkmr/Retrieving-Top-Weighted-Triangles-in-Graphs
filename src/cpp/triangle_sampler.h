@@ -810,10 +810,10 @@ namespace wsdm_2019_graph {
         total_weight += G[i].size() * e.wt + vertex_weight;
         vertex_cumulative_weights_1[i].push_back(total_weight);
       }
-      // cumulative_weights.push_back(total_weight);
-      // cumulative_weights[cumulative_weights.size() - 1] += prev;
-      // prev = cumulative_weights.back();
-      cumulative_weights[i] = total_weight + prev;
+    }
+
+    for (int i = 0; i < (int) G.size(); i++) {
+      cumulative_weights[i] = vertex_cumulative_weights_2[i].back() + prev;
       prev = cumulative_weights[i];
     }
 
