@@ -1,40 +1,71 @@
 #!/bin/bash
 declare -a datasets=(
-    coauth-DBLP
-    coauth-MAG-Geology
-    coauth-MAG-History
-    congress-bills
-    tags-stack-overflow
-    threads-math-sx
-    threads-stack-overflow
+#     congress-bills
+#     tags-stack-overflow
+#     threads-math-sx
+#     threads-stack-overflow
+    wikipedia
+    eth
+    aminer
+    MAG
 )
+
 declare -a times=(
-    3
-    3
-    1
-    5
-    3
-    3
+#     5
+#     3
+#     3
+#     100
     100
+    150
+    200
+    200
 )
+
 declare -a incs=(
-    0.3
-    0.3
-    0.1
-    0.5
-    0.3
-    0.3
+#     0.5
+#     0.3
+#     0.3
+#     10
     10
+    15
+    20
+    20
 )
-make -C ../src/cpp clean
-make -C ../src/cpp compare_sampling
+
+declare -a kvals=(
+    25
+    1000
+    40000
+)
+# make -C ../src/cpp clean
+# make -C ../src/cpp compare_sampling
+
 mkdir ../output/
-mkdir ../output/compare_sampling_25
+for k in "${kvals[@]}"
+do
+    mkdir ../output/compare_sampling_${k}
+done
+
 for i in "${!datasets[@]}"
 do
     dataset=${datasets[$i]}
-    time=${times[$i]}
+    tim=${times[$i]}
     inc=${incs[$i]}
-    ../src/cpp/compare_sampling ../data/binaries/${dataset}.binary ../output/brute_force_enumerator/${dataset}-triangles.binary 1 25 $time $inc &> ../output/compare_sampling_25/${dataset}
+    echo $dataset
+    echo $tim
+    echo $inc
+    for k in "${kvals[@]}"
+    do
+      ../src/cpp/compare_sampling ../data/binaries/${dataset}.binary notusingrightnow 1 $k $tim $inc &> ../output/compare_sampling_${k}/${dataset}
+    done
 done
-# ../src/cpp/compare_sampling/clique_sampler ../data/temporal-reddit-reply.txt 1 25 1.0 500 50 &> ../output/compare_sampling/temporal-reddit-reply
+
+for k in "${kvals[@]}"
+do
+    ../src/cpp/compare_sampling ../data/binaries/temporal-reddit-reply.binary notusingrightnow 1 $k 200 20 &> ../output/compare_sampling_${k}/temporal-reddit-reply
+done
+
+for k in "${kvals[@]}"
+do
+    ../src/cpp/compare_sampling /mnt/disks/additional_ssd_dir/spotify.binary notusingrightnow 0 $k 500 50 &> ../output/compare_sampling_${k}/spotify
+done

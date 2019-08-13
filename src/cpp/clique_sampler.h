@@ -123,67 +123,97 @@ namespace wsdm_2019_graph {
         return retval;
     }
 
-    set<weighted_clique> clique_sampler(Graph& G, int k, int nsamples) {
+    set<weighted_clique> clique_brute_force(Graph& G, int k) {
+        cerr << "=============================================" << endl;
+        cerr << "Running brute force for k-cliques" << endl;
+        cerr << "=============================================" << endl;
+        double st = clock();
+
+        vector<weighted_clique> cliques = enumerate_cliques(G, k);
+        // Min clique is actually max weight
+        auto max_clique = min_element(cliques.begin(), cliques.end());
+        double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+
+        cerr << "Found " << cliques.size() << " " << k << "-cliques." << endl;
+        if (cliques.size()) cerr << "The maximum weight " << k << "-clique was " << *max_clique << endl;
+        cerr << "Total Time (s): " << tot_time << endl;
+
+        return set<weighted_clique>(cliques.begin(), cliques.end());
+    }
+
+    set<weighted_clique> clique_sampler(GraphStruct& GS, int k, int nsamples) {
         cerr << "=============================================" << endl;
         cerr << "Running edge sampling for k-cliques" << endl;
         cerr << "=============================================" << endl;
         double pre_st = clock();
+
+        Graph &G = GS.G;
+        const vector<full_edge>& edges = GS.edges;
+        long long total_edge_weight = 0;
+        vector<int> weight_index;
+        int cur = 0;
+        while (cur < (int) edges.size()) {
+          weight_index.push_back(cur);
+          long long cur_wt = edges[cur].wt;
+          int nsteps = 5, found = 0;
+          while (cur < (int) edges.size() && nsteps--) {
+            cur++;
+            if (edges[cur].wt < cur_wt) {
+              found = 1;
+              break;
+            }
+          }
+
+          if (!found) {
+            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
+          }
+          total_edge_weight += (cur - weight_index.back()) * cur_wt;
+        }
+        weight_index.push_back(cur);
 
         // Prune the graph first
         vector<int> degree;
         vector<bool> removed;
         prune_edges(G, degree, removed, k-1);
 
-        // build distribution over edges
-        map<int, vector<full_edge>> edge_distribution;
-        for (int u = 0; u < (int) G.size(); u++) {
-            if (removed[u]) continue;
-            for (auto e : G[u]) {
-                int v = e.dst;
-                long long w = e.wt;
-                if (u > v) continue;
-                if (removed[v]) continue;
-                edge_distribution[e.wt].push_back({u, v, w});
-            }
-        }
-
-        vector<long long> cumulative_weights;
-        vector<long long> index_to_weight(edge_distribution.size());
-        int count = 0;
-        long long prev = 0;
-        // todo: replace this with p means
-        for (const auto& kv : edge_distribution) {
-            //cerr << kv.first << " " << kv.second.size() << endl;
-            cumulative_weights.push_back(kv.second.size() * kv.first);
-            cumulative_weights[cumulative_weights.size() - 1] += prev;
-            index_to_weight[count++] = kv.first;
-            prev = cumulative_weights.back();
-        }
         cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
-        cerr << "Edge weight classes: " << edge_distribution.size() << endl;
-        cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+        cerr << "Edge weight classes: " << int(weight_index.size())-1 << endl;
+        cerr << "Total edge weight: " << total_edge_weight << endl;
 
         double st = clock();
 
-        auto sample_edge = [&](){
-            long long s = rand64() % cumulative_weights.back();
-            int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
-            //cerr << "sampled weight: " << s << endl;
-            //cerr << "sampled index: " << idx << " " << index_to_weight[idx] << endl;
+        auto batched_sample_edges = [&](int num_samples){
+          vector<int> sample_index(num_samples);
+          vector<long long> sample_numbers(num_samples);
+          for (int i = 0; i < num_samples; i++) {
+            long long s = rand64() % total_edge_weight;
+            sample_numbers[i] = s;
+          }
 
-            long long weight = index_to_weight[idx];
-            auto& edges = edge_distribution[weight];
-            return edges[rand() % edges.size()];
+          long long cur_weight = 0;
+          int j = 0;
+          for (int i = 0; i < int(weight_index.size()) - 1; i++) {
+            cur_weight += (weight_index[i+1] - weight_index[i]) * edges[weight_index[i]].wt;
+            while (j < num_samples && sample_numbers[j] <= cur_weight) {
+              int e = rand() % (weight_index[i+1] - weight_index[i]);
+              sample_index[j] = e + weight_index[i];
+              j++;
+            }
+            if (j == num_samples) break;
+          }
+          return sample_index;
         };
 
         set<weighted_clique> counter;
         set<pair<int, int>> history;
+        auto sample_index = batched_sample_edges(nsamples);
         for (int samp = 0; samp < nsamples; samp++) {
-            auto sample = sample_edge();
+            auto sample = edges[sample_index[samp]];
             int u = sample.src, v = sample.dst;
+            if (removed[u] || removed[v]) continue;
+
             long long w = sample.wt;
             if (history.count(make_pair(u, v))) {
-                //cerr << "RESAMPLED!!" << endl;
                 continue;
             }
             history.insert(make_pair(u, v));
@@ -272,7 +302,7 @@ namespace wsdm_2019_graph {
         return counter;
     }
 
-    vector<weighted_clique> clique_sampler_parallel(Graph &G, int k, int nsamples, int nthreads) {
+    vector<weighted_clique> clique_sampler_parallel(GraphStruct& GS, int k, int nsamples, int nthreads) {
         cerr << "=============================================" << endl;
         cerr << "Running parallel clique sampling (k=" << k << ", " << nthreads << " threads)" << endl;
         cerr << "=============================================" << endl;
@@ -281,43 +311,42 @@ namespace wsdm_2019_graph {
         double pre_elapsed;
         clock_gettime(CLOCK_MONOTONIC, &pre_start);
 
+        Graph &G = GS.G;
+        const vector<full_edge>& edges = GS.edges;
+        long long total_edge_weight = 0;
+        vector<int> weight_index;
+        int cur = 0;
+        while (cur < (int) edges.size()) {
+          weight_index.push_back(cur);
+          long long cur_wt = edges[cur].wt;
+          int nsteps = 5, found = 0;
+          while (cur < (int) edges.size() && nsteps--) {
+            cur++;
+            if (edges[cur].wt < cur_wt) {
+              found = 1;
+              break;
+            }
+          }
+
+          if (!found) {
+            cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
+          }
+          total_edge_weight += (cur - weight_index.back()) * cur_wt;
+        }
+        weight_index.push_back(cur);
+
         // Prune the graph first
         vector<int> degree;
         vector<bool> removed;
         prune_edges(G, degree, removed, k-1);
 
-        // build distribution over edges
-        map<int, vector<full_edge>> edge_distribution;
-        for (int u = 0; u < (int) G.size(); u++) {
-            if (removed[u]) continue;
-            for (auto e : G[u]) {
-                int v = e.dst;
-                long long w = e.wt;
-                if (u > v) continue;
-                if (removed[v]) continue;
-                edge_distribution[e.wt].push_back({u, v, w});
-            }
-        }
-
-        vector<long long> cumulative_weights;
-        vector<long long> index_to_weight(edge_distribution.size());
-        int count = 0;
-        long long prev = 0;
-        // todo: replace this with p means
-        for (const auto& kv : edge_distribution) {
-            //cerr << kv.first << " " << kv.second.size() << endl;
-            cumulative_weights.push_back(kv.second.size() * kv.first);
-            cumulative_weights[cumulative_weights.size() - 1] += prev;
-            index_to_weight[count++] = kv.first;
-            prev = cumulative_weights.back();
-        }
         clock_gettime(CLOCK_MONOTONIC, &pre_finish);
 
         pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
         pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
         cerr << "Pre-processing time: " << pre_elapsed << endl;
-        cerr << "Edge weight classes: " << edge_distribution.size() << endl;
-        cerr << "Total edge weight: " << cumulative_weights.back() << endl;
+        cerr << "Edge weight classes: " << int(weight_index.size())-1 << endl;
+        cerr << "Total edge weight: " << total_edge_weight << endl;
 
         struct timespec start, finish;
         double tot_time;
@@ -328,19 +357,35 @@ namespace wsdm_2019_graph {
         vector<set<pair<int, int>>> histories(nthreads);
         int nsamples_per_thread = ceil(nsamples / nthreads);
 
-        auto sample_edge = [&](){
-            long long s = rand64() % cumulative_weights.back();
-            int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
+        auto batched_sample_edges = [&](int num_samples){
+          vector<int> sample_index(num_samples);
+          vector<long long> sample_numbers(num_samples);
+          for (int i = 0; i < num_samples; i++) {
+            long long s = rand64() % total_edge_weight;
+            sample_numbers[i] = s;
+          }
 
-            long long weight = index_to_weight[idx];
-            auto &edges = edge_distribution[weight];
-            return edges[rand() % edges.size()];
+          long long cur_weight = 0;
+          int j = 0;
+          for (int i = 0; i < int(weight_index.size()) - 1; i++) {
+            cur_weight += (weight_index[i+1] - weight_index[i]) * edges[weight_index[i]].wt;
+            while (j < num_samples && sample_numbers[j] <= cur_weight) {
+              int e = rand() % (weight_index[i+1] - weight_index[i]);
+              sample_index[j] = e + weight_index[i];
+              j++;
+            }
+            if (j == num_samples) break;
+          }
+          return sample_index;
         };
 
         auto parallel_sampler = [&](int i) {
+            auto sample_index = batched_sample_edges(nsamples);
             for (int samp = 0; samp < nsamples_per_thread; samp++) {
-                auto sample = sample_edge();
+                auto sample = edges[sample_index[samp]];
                 int u = sample.src, v = sample.dst;
+                if (removed[u] || removed[v]) continue;
+
                 long long w = sample.wt;
                 bool cont = false;
                 for (int j = 0; j < nthreads; j++) {

@@ -115,6 +115,10 @@ namespace wsdm_2019_graph {
     inline bool operator==(const full_edge& o) const {
       return (o.wt == wt) && (o.src == src) && (o.dst == dst);
     }
+    inline bool operator>(const full_edge& o) const {
+      if (o.wt != wt) return wt > o.wt;
+      return make_pair(src, dst) > make_pair(o.src, o.dst);
+    }
   };
 
   struct half_edge {
