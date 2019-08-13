@@ -370,10 +370,14 @@ namespace wsdm_2019_graph {
       }
 
       int u = sample_vertex();
-      const auto ev = sample_neighbour_1(u);
-      const auto ew = sample_neighbour_2(u, ev.wt);
+      auto ev = sample_neighbour_1(u);
+      auto ew = sample_neighbour_2(u, ev.wt);
       if (ev.dst == ew.dst) continue;
       nsamples++;
+
+      if (G[ev.dst].size() > G[ew.dst].size()) {
+        std::swap(ev, ew);
+      }
 
       for (const auto &e : G[ev.dst]) {
         if (e.dst == ew.dst) {
@@ -894,6 +898,10 @@ namespace wsdm_2019_graph {
         auto ew = sample_neighbour_2(u, ev.wt);
         if (ev.dst == ew.dst) continue;
         nsamples_++;
+
+        if (G[ev.dst].size() > G[ew.dst].size()) {
+          std::swap(ev, ew);
+        }
 
         for (const auto &e : G[ev.dst]) {
           if (e.dst == ew.dst) {
