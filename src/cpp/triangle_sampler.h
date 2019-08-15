@@ -83,7 +83,7 @@ namespace wsdm_2019_graph {
     for (int u = 0; u < (int) G.size(); u++) {
       for (const auto& e : G[u]) {
         if (G[e.dst].size() > G[u].size() || 
-           (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
+            (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
         vert_to_wt[e.dst] = e.wt;
       }
 
@@ -91,11 +91,11 @@ namespace wsdm_2019_graph {
         int v = e.dst;
         long long w = e.wt;
         if (G[e.dst].size() > G[u].size() || 
-           (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
+            (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
 
         for (const auto& ev : G[v]) {
           if (G[ev.dst].size() > G[v].size() || 
-             (G[ev.dst].size() == G[v].size() && ev.dst < v)) continue;
+              (G[ev.dst].size() == G[v].size() && ev.dst < v)) continue;
           if (vert_to_wt[ev.dst]) {
             // todo: replace with p means
             long long val = ev.wt + vert_to_wt[ev.dst] + w;
@@ -117,7 +117,7 @@ namespace wsdm_2019_graph {
 
       for (const auto& e : G[u]) {
         if (G[e.dst].size() > G[u].size() || 
-           (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
+            (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
         vert_to_wt[e.dst] = 0;
       }
     }
