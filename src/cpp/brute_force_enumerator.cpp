@@ -13,10 +13,11 @@ int main(int argc, char* argv[]) {
 
     // To use binary data files, add a character after out_path.
     // So run as ./brute_force_enumerator filename out_path {something here if we want to use binary otherwise nothing}.
-    auto GS = read_graph(argv[1], argc > 3);
+    auto GS = read_graph(argv[1], argc > 4);
     string out_path = argv[2];
+    int K = atoi(argv[3]);
 
-    auto all_tris = brute_force_sampler(GS);
+    auto all_tris = brute_force_sampler(GS, K);
     long long num_all_tris = all_tris.size();
 
     // ofstream triangle_file(dataset+"-triangles.txt");

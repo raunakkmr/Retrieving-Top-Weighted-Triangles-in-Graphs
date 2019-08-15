@@ -64,6 +64,75 @@ namespace wsdm_2019_graph {
   }
 
   // If k=-1 then returns all triangles otherwise returns top-k.
+  set<weighted_triangle> brute_force_sampler_minbucket(GraphStruct &GS, int k=-1, bool diagnostic=true) {
+    if (diagnostic) {
+      cerr << "=============================================" << endl;
+      cerr << "Running brute force detection (minbucket) for triangles" << endl;
+      cerr << "=============================================" << endl;
+    }
+
+    double st = clock();
+
+    // Can use degeneracy ordering to speed up brute force
+    // However, on certain tests it didnt have great performance.
+    Graph &G = GS.G;
+    set<weighted_triangle> counter;
+    long long num_tris = 0;
+
+    vector<long long> vert_to_wt(G.size());
+    for (int u = 0; u < (int) G.size(); u++) {
+      for (const auto& e : G[u]) {
+        if (G[e.dst].size() > G[u].size() || 
+           (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
+        vert_to_wt[e.dst] = e.wt;
+      }
+
+      for (const auto& e : G[u]) {
+        int v = e.dst;
+        long long w = e.wt;
+        if (G[e.dst].size() > G[u].size() || 
+           (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
+
+        for (const auto& ev : G[v]) {
+          if (G[ev.dst].size() > G[v].size() || 
+             (G[ev.dst].size() == G[v].size() && ev.dst < v)) continue;
+          if (vert_to_wt[ev.dst]) {
+            // todo: replace with p means
+            long long val = ev.wt + vert_to_wt[ev.dst] + w;
+            weighted_triangle tri = weighted_triangle(u, v, ev.dst, val);
+            num_tris++;
+            if (k < 0 || (int) counter.size() < k) {
+              counter.insert(tri);
+            } else {
+              // Compare weights, not triangles.
+              auto it = --(counter.end());
+              if (val > it->weight) {
+                counter.erase(it);
+                counter.insert(tri);
+              }
+            }
+          }
+        }
+      }
+
+      for (const auto& e : G[u]) {
+        if (G[e.dst].size() > G[u].size() || 
+           (G[e.dst].size() == G[u].size() && e.dst < u)) continue;
+        vert_to_wt[e.dst] = 0;
+      }
+    }
+    cerr << "Found " << num_tris << " triangles." << endl;
+    if (diagnostic) {
+      if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+
+      double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+      cerr << "Total Time (s): " << tot_time << endl;
+      cerr << endl;
+    }
+    return counter;
+  }
+
+  // If k=-1 then returns all triangles otherwise returns top-k.
   set<weighted_triangle> brute_force_sampler(GraphStruct &GS, int k=-1, bool diagnostic=true) {
     if (diagnostic) {
       cerr << "=============================================" << endl;
