@@ -53,13 +53,15 @@ int main(int argc, char* argv[]) {
 
     int nthreads = thread::hardware_concurrency();
 
-    auto edge_sampling_tri = edge_samples_version(GS, NUM_SAMPLES_EDGE);
-    auto edge_sampling_tri_parallel = edge_parallel_samples_version(GS, nthreads, NUM_SAMPLES_EDGE);
+    // auto edge_sampling_tri = edge_samples_version(GS, NUM_SAMPLES_EDGE);
+    // auto edge_sampling_tri_parallel = edge_parallel_samples_version(GS, nthreads, NUM_SAMPLES_EDGE);
     // auto wedge_sampling_tri = wedge_sampler(GS, NUM_SAMPLES_WEDGE);
     // auto path_sampling_tri = path_sampler(GS, NUM_SAMPLES_PATH);
     // auto heavy_light_sampling_tri = heavy_light_sampler(GS, 0.05);
-    // auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);
-    // auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, K);
+    auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, 1000);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, 1000);
+    auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, 1000);
 
     if (CLIQUE_SIZE > 1) {
         auto sampled_cliques = clique_sampler(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);

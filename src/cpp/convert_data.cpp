@@ -6,70 +6,70 @@ using namespace std;
 using namespace wsdm_2019_graph;
 
 int main(int argc, char* argv[]) {
-    ios::sync_with_stdio(0);
-    cin.tie(0);
-    srand(0);
+  ios::sync_with_stdio(0);
+  cin.tie(0);
+  srand(0);
 
-    // auto GS = read_graph(argv[1]);
-    auto GS = read_graph(argv[1], false, false);
-    string dataset_path = argv[2];
+  // auto GS = read_graph(argv[1]);
+  auto GS = read_graph(argv[1], false, false);
+  string dataset_path = argv[2];
 
-    Graph G = GS.G;
+  Graph G = GS.G;
 
-    int n = G.size();
-    long long m = 0;
-    vector<pair<int, int>> sort_by_deg;
-    for (int u = 0; u < (int) G.size(); u++) {
-        if (G[u].empty()) continue;
-        m += G[u].size();
-        sort_by_deg.push_back(make_pair((int) G[u].size(), u));
-    }
-    m /= 2;
-    sort(sort_by_deg.rbegin(), sort_by_deg.rend());
-    map<int, int> label;
-    for (int i = 0; i < (int) sort_by_deg.size(); i++) {
-        label[sort_by_deg[i].second] = i;
-    }
+  int n = G.size();
+  long long m = 0;
+  vector<pair<int, int>> sort_by_deg;
+  for (int u = 0; u < (int) G.size(); u++) {
+    if (G[u].empty()) continue;
+    m += G[u].size();
+    sort_by_deg.push_back(make_pair((int) G[u].size(), u));
+  }
+  m /= 2;
+  sort(sort_by_deg.rbegin(), sort_by_deg.rend());
+  map<int, int> label;
+  for (int i = 0; i < (int) sort_by_deg.size(); i++) {
+    label[sort_by_deg[i].second] = i;
+  }
 
-    // Prune out degree 0 nodes
-    n = label.size();
+  // Prune out degree 0 nodes
+  n = label.size();
 
-    ofstream out_file(dataset_path+".binary", ios::binary | ios::out);
+  ofstream out_file(dataset_path+".binary", ios::binary | ios::out);
 
-    binary_write(out_file, n);
-    int m_int = (int) m;
-    binary_write(out_file, m_int);
+  binary_write(out_file, n);
+  int m_int = (int) m;
+  binary_write(out_file, m_int);
 
-    size_t est_bytes = 8;
-    for (int u = 0; u < (int) G.size(); u++) {
-        int x = label[u];
-        for (auto &e : G[u]) {
-            int y = label[e.dst];
-            if (x < y) {
-                int bytes = 0;
-                // uses last 4 bits to indicate whether its a small weight edge or not.
-                // call it premature optimization but it saves a lot
-                bytes |= (e.wt <= 12 ? e.wt-1 : 12 + get_bytes(e.wt));
-                bytes <<= 2;
-                bytes |= get_bytes(y);
-                bytes <<= 2;
-                bytes |= get_bytes(x);
+  size_t est_bytes = 8;
+  for (int u = 0; u < (int) G.size(); u++) {
+    int x = label[u];
+    for (auto &e : G[u]) {
+      int y = label[e.dst];
+      if (x < y) {
+        int bytes = 0;
+        // uses last 4 bits to indicate whether its a small weight edge or not.
+        // call it premature optimization but it saves a lot
+        bytes |= (e.wt <= 12 ? e.wt-1 : 12 + get_bytes(e.wt));
+        bytes <<= 2;
+        bytes |= get_bytes(y);
+        bytes <<= 2;
+        bytes |= get_bytes(x);
 
-                binary_compressed_write(out_file, bytes);
-                binary_compressed_write(out_file, x);
-                binary_compressed_write(out_file, y);
-                est_bytes += 3 + get_bytes(x) + get_bytes(y);
-                if (e.wt > 12) {
-                    binary_compressed_write(out_file, e.wt);
-                    est_bytes += 1 + get_bytes(e.wt);
-                }
-                // cerr << x << " " << y << " " << e.wt << '\n';
-            }
+        binary_compressed_write(out_file, bytes);
+        binary_compressed_write(out_file, x);
+        binary_compressed_write(out_file, y);
+        est_bytes += 3 + get_bytes(x) + get_bytes(y);
+        if (e.wt > 12) {
+          binary_compressed_write(out_file, e.wt);
+          est_bytes += 1 + get_bytes(e.wt);
         }
+        // cerr << x << " " << y << " " << e.wt << '\n';
+      }
     }
+  }
 
-    cerr << "estimated " << est_bytes << " bytes written" << endl;
-    out_file.close();
+  cerr << "estimated " << est_bytes << " bytes written" << endl;
+  out_file.close();
 
-    return 0;
+  return 0;
 }
