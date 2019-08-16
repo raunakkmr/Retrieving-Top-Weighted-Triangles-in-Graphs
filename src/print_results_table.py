@@ -2,9 +2,7 @@ import argparse
 import os
 
 files = [
-  'congress-bills',
   'tags-stack-overflow',
-  'threads-math-sx',
   'threads-stack-overflow',
   'wikipedia',
   'eth',
@@ -40,16 +38,27 @@ for fname in files:
       brute_time = '>86400'
       static_acc = '\\xmark'
 
-    row = ''
-    if fname != 'congress-bills':
-      row += '& '
+    if fname == 'wikipedia':
+      nm = 'Wikipedia-clickstream'
+    elif fname == 'eth':
+      nm = 'Ethereum'
+    elif fname == 'aminer':
+      nm = 'Aminer'
+    elif fname == 'temporal-reddit-reply':
+      nm = 'reddit-reply'
     else:
-      row += '  '
+      nm = fname
+    row = ''
+    # if fname != 'tags-stack-overflow':
+    #   row += '& '
+    # else:
+    #   row += '  '
+    row += '& '
     if fname != 'spotify':
       # row += '{:>25} & {:10.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} \\\\'.format(fname, brute_time, static_time, dynamic_time, auto_time, static_acc)
-      row += '{:>25} & {:10.3f} & {:7.3f} & {:7.3f} & {:7.3f} \\\\'.format(fname, brute_time, static_time, dynamic_time, static_acc)
+      row += '{:>25} & {:10.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} \\\\'.format(nm, brute_time, -1, -1, dynamic_time, auto_time, static_time, static_acc)
     else:
       # row += '{:>25} & {:>10} & {:7.3f} & {:7.3f} & {:7.3f} & {:7} \\\\'.format(fname, brute_time, static_time, dynamic_time, auto_time, static_acc)
-      row += '{:>25} & {:>10} & {:7.3f} & {:7.3f} & {:7} \\\\'.format(fname, brute_time, static_time, dynamic_time, static_acc)
+      row += '{:>25} & {:>10} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7.3f} & {:7} \\\\'.format(nm, brute_time, -1, -1, dynamic_time, auto_time, static_time, static_acc)
 
     print(row)
