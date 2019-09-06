@@ -62,23 +62,24 @@ int main(int argc, char* argv[]) {
   cerr << endl;
 #endif
 
-  auto res = edge_time_version(GS, end_time, increment);
-  auto edge_sampling_tri = res.first;
-  auto edge_sampling_times = res.second;
-  res = wedge_time_version(GS, end_time, increment);
-  auto wedge_sampling_tri = res.first;
-  auto wedge_sampling_times = res.second;
-  res = path_time_version(GS, end_time, increment);
-  auto path_sampling_tri = res.first;
-  auto path_sampling_times = res.second;
+  double cur_time = increment;
+  vector<double> times;
+  set<weighted_triangle> edge_sampling_tri, wedge_sampling_tri, path_sampling_tri;
+  auto all_tris = dynamic_heavy_light(GS, K);
+  while (cur_time <= end_time) {
+    times.push_back(cur_time);
+    edge_sampling_tri = (edge_time_version(GS, cur_time, -1, false));
+    wedge_sampling_tri = (wedge_time_version(GS, cur_time, -1, false));
+    path_sampling_tri = (path_time_version(GS, cur_time, -1, false));
+    cerr << "*** Comparing edge sampling ***" << endl;
+    compare_statistics(all_tris, edge_sampling_tri, K, true);
+    cerr << "*** Comparing wedge sampling ***" << endl;
+    compare_statistics(all_tris, wedge_sampling_tri, K, true);
+    cerr << "*** Comparing path sampling ***" << endl;
+    compare_statistics(all_tris, path_sampling_tri, K, true);
+    cur_time += increment;
+  }
 
-  auto all_tris = brute_force_sampler(GS, K);
-  cerr << "*** Comparing edge sampling ***" << endl;
-  compare_statistics_time(all_tris, edge_sampling_tri, edge_sampling_times, K, true);
-  cerr << "*** Comparing wedge sampling ***" << endl;
-  compare_statistics_time(all_tris, wedge_sampling_tri, wedge_sampling_times, K, true);
-  cerr << "*** Comparing path sampling ***" << endl;
-  compare_statistics_time(all_tris, path_sampling_tri, path_sampling_times, K, true);
 
   #if PRINT_STATISTICS
     Graph &G = GS.G;
