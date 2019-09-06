@@ -316,14 +316,13 @@ namespace wsdm_2019_graph {
   // If binary is true then filename is the path to the .binary file which
   // contains the graph in the following form: one line with the number of
   // vertices n, one line with the number of edges m, and 3m lines representing
-  // edges (u, v, w). normal_graph is ignored in this case.
-  // Otherwise, for the simplicial datasets filename contains the path and common
-  // prefix of the datafiles. For the temporal-reddit-reply dataset filename is
-  // the path to the temporal-reddit-reply.txt file. If normal_graph is true then
-  // filename is the path to the file which contains the graph in the following
-  // form: one line # n m, and m
-  // lines representing edges u v w.
-  GraphStruct read_graph(string filename, bool binary=false, bool normal_graph=false) {
+  // edges (u, v, w). format is ignored in this case.
+  // Otherwise, for the simplicial datasets filename contains the path and
+  // common prefix of the datafiles. For the temporal-reddit-reply dataset
+  // filename is the path to the temporal-reddit-reply.txt file. For weighted
+  // graphs filename is the path to the file which contains the graph in the
+  // following form: one line # n m, and m lines representing edges u v w.
+  GraphStruct read_graph(string filename, bool binary=false, string format="") {
 
     // no use for the times right now
     unordered_map<int, unordered_map<int, long long>> weight;
@@ -375,7 +374,7 @@ namespace wsdm_2019_graph {
       cerr << bytes_read << " bytes read" << endl;
     } else {
       cerr << "non-binary reading mode" << endl;
-      if (filename.find("reddit") != string::npos) {
+      if (format.find("temporal") != string::npos) {
         ifstream edges(filename, ifstream::in);
 
         long long u, v, t;
@@ -396,7 +395,7 @@ namespace wsdm_2019_graph {
             weight[v][u]++;
           }
         }
-      } else if (normal_graph) {
+      } else if (format.find("weighted") != string::npos) {
         ifstream edge_file(filename, ifstream::in);
 
         string hash = "";
@@ -420,7 +419,7 @@ namespace wsdm_2019_graph {
           GS.G[u].push_back({(int) v, w});
           GS.G[v].push_back({(int) u, w});
         }
-      } else {
+      } else if (format.find("simplicial") != string::npos) {
         ifstream simplices(filename + "-simplices.txt", ifstream::in);
         ifstream nverts(filename + "-nverts.txt", ifstream::in);
         ifstream times(filename + "-times.txt", ifstream::in);
@@ -450,6 +449,8 @@ namespace wsdm_2019_graph {
             }
           }
         }
+      } else {
+        cerr << "Unrecognized file format." << endl;
       }
     }
 
@@ -457,7 +458,7 @@ namespace wsdm_2019_graph {
     vector<double> all_weights;
 
     cerr << "constructing graph with " << nnodes << " nodes" << endl;
-    if (!binary && !normal_graph) {
+    if (!binary && (format.find("weighted") == string::npos)) {
       GS.G.resize(nnodes);
       for (auto& e0 : weight) {
         for (auto& e1 : e0.second) {

@@ -1,6 +1,9 @@
 #!/bin/bash
+
+# Runs the compare_deterministic executable for all datasets for 10 runs and
+# writes output to ../output/compare_deterministic_${k}_${run}/[dataset-name].
+
 declare -a datasets=(
-    congress-bills
     tags-stack-overflow
     threads-math-sx
     threads-stack-overflow
@@ -11,11 +14,11 @@ declare -a datasets=(
 )
 
 declare -a kvals=(
-#     25
     1000
-#     40000
     100000
 )
+
+declare runs=10
 
 make -C ../src/cpp clean
 make -C ../src/cpp compare_deterministic
@@ -23,25 +26,29 @@ make -C ../src/cpp compare_deterministic
 mkdir ../output/
 for k in "${kvals[@]}"
 do
-    mkdir ../output/compare_deterministic_${k}
-done
-
-for i in "${!datasets[@]}"
-do
-    dataset=${datasets[$i]}
-    for k in "${kvals[@]}"
+    for run in {1..10..1}
     do
-#       ../src/cpp/compare_deterministic ../data/binaries/${dataset}.binary ../output/brute_force_enumerator/${dataset}-triangles.binary 1 $k &> ../output/compare_deterministic_${k}/${dataset}
-      ../src/cpp/compare_deterministic ../data/binaries/${dataset}.binary notusingrightnow 1 $k &> ../output/compare_deterministic_${k}/${dataset}
+        mkdir ../output/compare_deterministic_${k}_${run}
     done
 done
 
-for k in "${kvals[@]}"
+for run in {1..10..1}
 do
-    ../src/cpp/compare_deterministic ../data/binaries/temporal-reddit-reply.binary notusingrightnow 1 $k &> ../output/compare_deterministic_${k}/temporal-reddit-reply
+    for k in "${kvals[@]}"
+    do
+        for dataset in "${datasets[@]}"
+        do
+            ../src/cpp/compare_deterministic -filename=../data/binaries/${dataset}.binary -binary=true -k=${k} &> ../output/compare_deterministic_${k}_${run}/${dataset}
+        done
+    done
 done
 
-for k in "${kvals[@]}"
+for run in {1..10..1}
 do
-    ../src/cpp/compare_deterministic /mnt/disks/additional_ssd_dir/spotify.binary notusingrightnow 0 $k &> ../output/compare_deterministic_${k}/spotify
+    for k in "${kvals[@]}"
+    do
+        ../src/cpp/compare_deterministic -filename=../data/binaries/temporal-reddit-reply.binary -binary=true -k=${k} &> ../output/compare_deterministic_${k}_${run}/temporal-reddit-reply
+
+        ../src/cpp/compare_deterministic -filename=/mnt/disks/additional_ssd_dir/spotify.binary -binary=true -k=${k} &> ../output/compare_deterministic_${k}_${run}/spotify
+    done
 done
