@@ -31,14 +31,15 @@ int main(int argc, char* argv[]) {
 #endif
 
   auto heavy_light_tri = heavy_light_sampler(GS, K);
-  auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, K);
-  auto auto_thresholded_tri = auto_thresholded_heavy_light(GS, K);
+  auto adaptive_heavy_light_tri = dynamic_heavy_light(GS, K, false);
+  auto auto_thresholded_tri = dynamic_heavy_light(GS, K, true);
 
   if (CHECK_TRIANGLES) {
     // Compute accuracy by comparing with dynamic heavy-light on the
     // Spotify dataset. For all others run brute force.
     auto all_tris = adaptive_heavy_light_tri;
-    if (argv[1].find("spotify" == string::npos)) {
+    string spotify = "spotify";
+    if (spotify.find(argv[1]) == string::npos) {
       all_tris = brute_force_sampler(GS, K);
     }
     // auto all_tris = read_all_triangles_set(tri_file);
@@ -49,9 +50,9 @@ int main(int argc, char* argv[]) {
     cerr << "*** Comparing auto thresholded heavy light***" << endl;
     compare_statistics(all_tris, auto_thresholded_tri, K, true);
 
+    /*
     Graph &G = GS.G;
 
-    /*
     // Write out triangles to a file
     bool write_out_stats = false;
     if (write_out_stats) {
