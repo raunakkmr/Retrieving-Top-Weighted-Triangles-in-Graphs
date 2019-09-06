@@ -7,7 +7,11 @@ def make_plot(thresholds, accs, times, k, dataset):
   times = [0] + times
   accs = [0] + accs
 
-  plt.subplot(2, 1, 1)
+  fig, ax = plt.subplots()
+
+  # plt.subplot(2, 1, 1)
+  plt.yticks(fontsize=18)
+  plt.xticks(fontsize=18)
   for y in np.arange(0, 1, 0.2):
     plt.plot(range(0, 100), [y] * len(range(0, 100)), "--", lw=0.5, color="black", alpha=0.3)
   plt.tick_params(axis="both", which="both", bottom="off", top="off",
@@ -15,10 +19,15 @@ def make_plot(thresholds, accs, times, k, dataset):
   plt.ylim(0, accs[-1])
   plt.xlim(0, thresholds[-1])
   plt.plot(thresholds, accs, label='accuracy', color='green')
-  plt.ylabel('accuracy')
-  # plt.title('accuracy/time vs threshold trade-off\n for {} and k = {}'.format(dataset, k))
+  plt.ylabel('accuracy', fontsize=24)
+  plt.xlabel('percentage of edges labelled heavy', fontsize=24)
+  fig.savefig('../figs/static_hl_tradeoff_accuracy_{}_{}.pdf'.format(dataset, k), bbox_inches='tight')
+  plt.close()
 
-  plt.subplot(2, 1, 2)
+  fig, ax = plt.subplots()
+
+  plt.yticks(fontsize=18)
+  plt.xticks(fontsize=18)
   if dataset == 'eth':
     step = 20
   else:
@@ -30,10 +39,10 @@ def make_plot(thresholds, accs, times, k, dataset):
   plt.ylim(0, times[-1])
   plt.xlim(0, thresholds[-1])
   plt.plot(thresholds, times, label='time (s)', color='red')
-  plt.ylabel('time (s)')
-  plt.xlabel('thresholds: percentage of edges labelled heavy')
+  plt.ylabel('time (seconds)', fontsize=24)
+  plt.xlabel('percentage of edges labelled heavy', fontsize=24)
 
-  plt.savefig('../figs/static_hl_tradeoff_{}_{}'.format(dataset, k))
+  fig.savefig('../figs/static_hl_tradeoff_time_{}_{}.pdf'.format(dataset, k), bbox_inches='tight')
   plt.close()
 
 def get_info_and_plot(dataset, lines):
@@ -57,5 +66,4 @@ def get_info_and_plot(dataset, lines):
 thresholds = list(range(5, 105, 5))
 with open('../output/static_hl') as f:
   lines = f.readlines()
-  get_info_and_plot('tags-stack-overflow', lines[:1055])
   get_info_and_plot('eth', lines[1055:])

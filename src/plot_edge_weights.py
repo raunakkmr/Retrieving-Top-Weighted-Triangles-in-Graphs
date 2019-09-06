@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,13 +28,13 @@ def log_binning(counter_dict,bin_count=35):
     
     return bin_means
 
-def fit_powerlaw(x, y):
+def fit_powerlaw(x, y, xmin):
     l = [([xx]*yy) for (xx, yy) in zip(x, y)]
     l = [item for sublist in l for item in sublist]
-    dist = powerlaw.Fit(l, discrete=True)
+    dist = powerlaw.Fit(l, xmin=xmin, discrete=True)
     return dist
 
-datasets = ['tags-stack-overflow', 'threads-stack-overflow'] #, 'MAG']
+datasets = ['tags-stack-overflow', 'wikipedia']
 for dataset in datasets:
     path = '../output/edge_weights_{}'.format(dataset)
     with open(path, 'r') as f:
@@ -43,41 +42,36 @@ for dataset in datasets:
         x = [int(line.split()[0]) for line in lines]
         y = [int(line.split()[1]) for line in lines]
         m = np.sum(y)
-        dist = fit_powerlaw(x, y)
+        xmin = None
+        if dataset == 'wikipedia':
+            xmin = 11
+        dist = fit_powerlaw(x, y, xmin)
         print('Datset: {}'.format(dataset))
         print('alpha: {}, xmin: {}'.format(dist.power_law.alpha, dist.power_law.xmin))
         ba_c2 = {xx : yy / m for (xx,yy) in zip(x,y)}
 
     ba_x,ba_y = log_binning(ba_c2,50)
 
-    _, ax = plt.subplots()
-    plt.yticks(fontsize=12)
-    plt.xticks(fontsize=12)
+    fig, ax = plt.subplots()
+    plt.yticks(fontsize=18)
+    plt.xticks(fontsize=18)
     plt.xlim(min(x), max(x))
     plt.ylim(min(y/m), max(y/m))
     plt.xscale('log')
     plt.yscale('log')
     ax.scatter(ba_x, ba_y, color='red', marker='s', s=50)
-    dist.plot_pdf(ax)
+    alpha, xmin = dist.power_law.alpha, dist.power_law.xmin
+    p_x = [t for t in ba_x if t >= xmin]
+    p_y = [(alpha-1)/xmin * (t/xmin)**(-alpha) for t in p_x]
+    ax.plot(p_x, p_y)
     ax.get_lines()[0].set_color('blue')
-    plt.xlabel('edge weight', fontsize=12)
-    plt.ylabel('fraction', fontsize=12)
-    plt.title('Dataset: {}'.format(dataset))
+    plt.xlabel('edge weight', fontsize=20)
+    plt.ylabel('fraction', fontsize=20)
+    plt.title('Dataset: {}'.format(dataset), fontsize=20)
 
     red_patch = mpatches.Patch(color='red', label='empirical fraction')
     blue_patch = mpatches.Patch(color='blue', label='best fit powerlaw')
-    plt.legend(handles=[blue_patch, red_patch])
+    plt.legend(handles=[blue_patch, red_patch], fontsize=20)
 
-    plt.savefig('../figs/edge_weights_{}'.format(dataset))
+    fig.savefig('../figs/edge_weights_{}.pdf'.format(dataset), bbox_inches='tight')
     plt.close()
-
-# hist, bins, _ = plt.hist(x_a, weights=y_a, bins=10)
-# plt.close()
-# logbins = np.logspace(np.log10(bins[0]),np.log10(bins[-1]),len(bins))
-# plt.hist(x_a, weights=y_a, bins=logbins, log=True, color=['red','green','blue'], label=datasets)
-# plt.xscale('log')
-# plt.xlabel('edge weight', fontsize=12)
-# plt.ylabel('count', fontsize=12)
-# plt.legend()
-# plt.savefig('../figs/edge_weights')
-# plt.close()
