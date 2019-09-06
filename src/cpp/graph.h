@@ -1,3 +1,6 @@
+// This file implements generic graph data structures, and graph reading /
+// writing.
+
 #ifndef GRAPH_H
 #define GRAPH_H
 
@@ -11,7 +14,8 @@ using namespace std;
 
 namespace wsdm_2019_graph {
 
-  // Actually gets number of bytes minus 1 for our specialized files
+  // Returns the number of bytes - 1 needed to represented x for our specialized
+  // binary files.
   inline int get_bytes(unsigned int x) {
     if (x <= numeric_limits<unsigned char>::max()) {
       return 0;
@@ -23,6 +27,7 @@ namespace wsdm_2019_graph {
     return -1;
   }
 
+  // Class to read and write in our specialized binary format.
   class BinaryReader {
     const static int BLENGTH = 1024 * 1024;
     char buf[2 * BLENGTH + 4];
@@ -54,12 +59,10 @@ namespace wsdm_2019_graph {
         if (!stream.eof()) {
           stream.read(buf, BLENGTH);
         }
-        // When reading into this circular buffer,
-        // an integer might get split at the edges,
-        // so we assume the maximum contiguous chunk
-        // representing an int is at most length 4, 
-        // and copy over 3 bytes from the beginning to make sure
-        // this never happens
+        // When reading into this circular buffer, an integer might get split at
+        // the edges, so we assume the maximum contiguous chunk representing an
+        // int is at most length 4, and copy over 3 bytes from the beginning to
+        // make sure this never happens.
         buf[2 * BLENGTH] = buf[0];
         buf[2 * BLENGTH + 1] = buf[1];
         buf[2 * BLENGTH + 2] = buf[2];
@@ -76,11 +79,13 @@ namespace wsdm_2019_graph {
     }
   };
 
+  // Write out value in binary format without any compression.
   template<typename T>
     void binary_write(std::ostream& stream, T value){
       stream.write(reinterpret_cast<char*>(&value), sizeof(T));
     }
 
+  // Write out x in binary format with compression.
   inline void binary_compressed_write(std::ostream& stream, unsigned int x) {
     if (x <= numeric_limits<unsigned char>::max()) {
       unsigned char value = x;
@@ -96,11 +101,12 @@ namespace wsdm_2019_graph {
     }
   }
 
+  // Generate a 64 bit random number.
   long long rand64() {
     return rand() * (1LL << 32) + rand();
   }
 
-  // generic data structures for graphs
+  // Generic data structures for graphs.
   struct full_edge {
     int src, dst;
     long long wt;
@@ -313,18 +319,25 @@ namespace wsdm_2019_graph {
     return retval;
   }
 
+  // Reads the graph file and returns a graph data structure.
+  // Arguments:
+  //   filename: Path to graph file.
+  //   binary: Reading our specialized binary files or not.
+  //   format: If binary is false then this indicates the format of the graph
+  //   file. One of simplicial, temporal or weighted.
   // If binary is true then filename is the path to the .binary file which
   // contains the graph in the following form: one line with the number of
   // vertices n, one line with the number of edges m, and 3m lines representing
   // edges (u, v, w). format is ignored in this case.
-  // Otherwise, for the simplicial datasets filename contains the path and
-  // common prefix of the datafiles. For the temporal-reddit-reply dataset
-  // filename is the path to the temporal-reddit-reply.txt file. For weighted
-  // graphs filename is the path to the file which contains the graph in the
-  // following form: one line # n m, and m lines representing edges u v w.
+  // Otherwise, for the simplicial datasets (format = simplicial) filename
+  // contains the path and common prefix of the datafiles. For the
+  // temporal-reddit-reply dataset (format = temporal) filename is the path to
+  // the temporal-reddit-reply.txt file. For weighted graphs (format = weighted)
+  // filename is the path to the file which contains the graph in the following
+  // form: one line # n m, and m lines representing edges u v w.
   GraphStruct read_graph(string filename, bool binary=false, string format="") {
 
-    // no use for the times right now
+    // No use for the times right now.
     unordered_map<int, unordered_map<int, long long>> weight;
     map<int, int> label;
     GraphStruct GS;
@@ -332,9 +345,10 @@ namespace wsdm_2019_graph {
     int nedges = 0;
     int m = 0;
 
-    cerr << "reading in graph " << filename << endl;
+    cerr << "Reading in graph: " << filename << endl;
 
     if (binary) {
+      cerr << "Binary reading mode." << endl;
       ifstream data_file(filename, ios::binary | ios::in);
       BinaryReader reader(data_file);
 
@@ -342,7 +356,7 @@ namespace wsdm_2019_graph {
       m = reader.read(4);
 
       size_t bytes_read = 8;
-      cerr << "nodes and edges: " << nnodes << " " << m << endl;
+      cerr<< "Nodes: " << nnodes << ", edges: " << m << endl;
 
       GS.G.resize(nnodes);
 
@@ -356,7 +370,9 @@ namespace wsdm_2019_graph {
             v = reader.read(1+bytes[1]);
 
         unsigned int w;
-        if (bytes[2] < 12) { // special case when weight is small (majority of weights)
+        // Special case when weight is small, which is true for a majority of
+        // the weights.
+        if (bytes[2] < 12) {
           w = 1 + bytes[2];
           bytes[2] = -1;
         } else {
@@ -364,16 +380,15 @@ namespace wsdm_2019_graph {
           w = reader.read(1+bytes[2]);
         }
 
-        //cerr << u << " " << v << " " << w << '\n';
         GS.G[u].push_back({v, w});
         GS.G[v].push_back({u, w});
 
         bytes_read += 3 + bytes[0] + bytes[1] + bytes[2];
-        //cerr << bytes_read << " " << data_file.tellg() << '\n';
       }
-      cerr << bytes_read << " bytes read" << endl;
+
+      cerr << "Bytes read: " << bytes_read << endl;
     } else {
-      cerr << "non-binary reading mode" << endl;
+      cerr << "Non-binary reading mode." << endl;
       if (format.find("temporal") != string::npos) {
         ifstream edges(filename, ifstream::in);
 
@@ -389,6 +404,8 @@ namespace wsdm_2019_graph {
           }
 
           u = label[u], v = label[v];
+          // Weight of an edge is equal to the number of temporal edges between
+          // the endpoints.
           if (u < v) {
             weight[u][v]++;
           } else if (u > v) {
@@ -400,7 +417,7 @@ namespace wsdm_2019_graph {
 
         string hash = "";
         edge_file >> hash >> nnodes >> m;
-        cerr << "nodes and edges: " << nnodes << " " << m << endl;
+        cerr<< "Nodes: " << nnodes << ", edges: " << m << endl;
 
         GS.G.resize(nnodes);
 
@@ -436,11 +453,13 @@ namespace wsdm_2019_graph {
             simplex[i] = label[simplex[i]];
           }
 
+          // Weight of an edge is the number of times the endpoints appeared
+          // together in a simplex.
           for (int i = 0; i < ns; i++) {
             for (int j = i+1; j < ns; j++) {
-              // We filter out self loops in this step,
-              // but if a simplex has two of the same node,
-              // we double the weight contribution to that node
+              // We filter out self loops in this step, but if a simplex has two
+              // of the same node, we double the weight contribution to that
+              // node
               if (simplex[i] < simplex[j]) {
                 weight[simplex[i]][simplex[j]]++;
               } else if (simplex[i] > simplex[j]) {
@@ -450,14 +469,14 @@ namespace wsdm_2019_graph {
           }
         }
       } else {
-        cerr << "Unrecognized file format." << endl;
+        cerr << "ERROR! Unrecognized file format." << endl;
       }
     }
 
     double largest_weight = 0, sum_weight = 0, median_weight = 0;
     vector<double> all_weights;
 
-    cerr << "constructing graph with " << nnodes << " nodes" << endl;
+    cerr << "Constructing graph with " << nnodes << " nodes." << endl;
     if (!binary && (format.find("weighted") == string::npos)) {
       GS.G.resize(nnodes);
       for (auto& e0 : weight) {
@@ -497,7 +516,7 @@ namespace wsdm_2019_graph {
     GS.n = nnodes;
     GS.m = nedges;
 
-    cerr << "done constructing graph" << endl;
+    cerr << "Done constructing graph." << endl;
     cerr << endl;
 
     omp_set_num_threads(thread::hardware_concurrency());
@@ -519,7 +538,7 @@ namespace wsdm_2019_graph {
 
     cerr << endl;
 
-    cerr << "read in a graph with " << nnodes << " nodes and " << nedges << " edges" << endl;
+    cerr << "Read in a graph with " << nnodes << " nodes and " << nedges << " edges." << endl;
     cerr << "Average degree: " << 2.0 * nedges / nnodes << endl;
 
     return GS;

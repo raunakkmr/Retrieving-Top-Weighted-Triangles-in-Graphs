@@ -31,10 +31,10 @@ int main(int argc, char* argv[]) {
   google::SetUsageMessage(usage);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-	if (FLAGS_filename.empty()) {
-		std::cerr << "No file specified! Type ./compare_deterministic --help for a description of the program parameters." << std::endl;
-		return 0;
-	}
+  if (FLAGS_filename.empty()) {
+    std::cerr << "No file specified! Type ./compare_deterministic --help for a description of the program parameters." << std::endl;
+    return 0;
+  }
 
   ios::sync_with_stdio(0);
   cin.tie(0);
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
   compare_statistics(all_tris, auto_thresholded_tri, K, true);
 
   /*
-  Graph &G = GS.G;
+     Graph &G = GS.G;
 
   // Write out triangles to a file
   bool write_out_stats = false;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
   }
   degree_file.close();
   }
-    */
+   */
 
   return 0;
 }

@@ -36,10 +36,10 @@ int main(int argc, char* argv[]) {
   google::SetUsageMessage(usage);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-	if (FLAGS_filename.empty()) {
-		std::cerr << "No file specified! Type ./compare_parallel_sampling --help for a description of the program parameters." << std::endl;
-		return 0;
-	}
+  if (FLAGS_filename.empty()) {
+    std::cerr << "No file specified! Type ./compare_parallel_sampling --help for a description of the program parameters." << std::endl;
+    return 0;
+  }
 
   ios::sync_with_stdio(0);
   cin.tie(0);

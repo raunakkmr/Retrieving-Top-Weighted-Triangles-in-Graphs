@@ -1348,198 +1348,198 @@ set<weighted_triangle> dynamic_heavy_light(GraphStruct &GS, int k = 100, bool au
 }
 
 /*
-set<weighted_triangle> adaptive_heavy_light(GraphStruct &GS, int k = 100, bool keep_all = false) {
-  cerr << "=============================================" << endl;
-  cerr << "Running adaptive heavy light for triangles" << endl;
-  cerr << "=============================================" << endl;
+   set<weighted_triangle> adaptive_heavy_light(GraphStruct &GS, int k = 100, bool keep_all = false) {
+   cerr << "=============================================" << endl;
+   cerr << "Running adaptive heavy light for triangles" << endl;
+   cerr << "=============================================" << endl;
 
-  double pre_st = clock();
+   double pre_st = clock();
 
-  Graph &G = GS.G;
-  const vector<full_edge> &edges = GS.edges;
-  vector<unordered_map<int, long long>> exists(G.size());
-  vector<long long> vert_to_wt(G.size());
-  vector<bool> computed(G.size());
-  vector<set<int>> deleted(G.size());
+   Graph &G = GS.G;
+   const vector<full_edge> &edges = GS.edges;
+   vector<unordered_map<int, long long>> exists(G.size());
+   vector<long long> vert_to_wt(G.size());
+   vector<bool> computed(G.size());
+   vector<set<int>> deleted(G.size());
 
-  cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+   cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
 
-  double st = clock();
-  set<weighted_triangle> counter, topk;
-  long long num_tris = 0;
+   double st = clock();
+   set<weighted_triangle> counter, topk;
+   long long num_tris = 0;
 
-  Graph Gh;
-  int hi = 0, hj = 0;
-  long long threshold = numeric_limits<long long>::max();
-  counter.insert(weighted_triangle(0, 0, 0, threshold));
-  auto curr = counter.begin();
+   Graph Gh;
+   int hi = 0, hj = 0;
+   long long threshold = numeric_limits<long long>::max();
+   counter.insert(weighted_triangle(0, 0, 0, threshold));
+   auto curr = counter.begin();
 
-  // Use memoization to compute exists
-  auto compute_exists_per_node = [&](int u) {
-    if (!computed[u]) {
-      computed[u] = true;
-      for (const auto& e : G[u]) {
-        if (!deleted[u].count(e.dst)) {
-          exists[u][e.dst] = e.wt;
-          exists[e.dst][u] = e.wt;
-        }
-      }
-    }
-  };
+// Use memoization to compute exists
+auto compute_exists_per_node = [&](int u) {
+if (!computed[u]) {
+computed[u] = true;
+for (const auto& e : G[u]) {
+if (!deleted[u].count(e.dst)) {
+exists[u][e.dst] = e.wt;
+exists[e.dst][u] = e.wt;
+}
+}
+}
+};
 
-  auto search = [&](int u, int v) {
-    if (G[u].size() > G[v].size()) std::swap(u, v);
-    if (deleted[u].count(v)) return 0LL;
-    if (exists[u].count(v)) return exists[u][v];
-    for (const auto& e : G[u]) {
-      if (e.dst == v) return e.wt;
-    }
-    return 0LL;
-  };
+auto search = [&](int u, int v) {
+if (G[u].size() > G[v].size()) std::swap(u, v);
+if (deleted[u].count(v)) return 0LL;
+if (exists[u].count(v)) return exists[u][v];
+for (const auto& e : G[u]) {
+if (e.dst == v) return e.wt;
+}
+return 0LL;
+};
 
-  while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
-    // Version where we use a threshold
-    auto ei = edges[hi], ej = edges[hj];
-    Gh.resize(max(ej.dst+1, (int) Gh.size())); 
-    threshold = 2 * ej.wt + ei.wt;
+while ((int) topk.size() < k+1 && hj < (int) edges.size()) {
+// Version where we use a threshold
+auto ei = edges[hi], ej = edges[hj];
+Gh.resize(max(ej.dst+1, (int) Gh.size())); 
+threshold = 2 * ej.wt + ei.wt;
 
-    // TODO: COMPUTE THE MAGIC EXPONENT THROUGH SOME THEORY
-    // This exponent should be roughly 2 - O(poly(1/beta)), where beta is 
-    // the exponent of the power law governing the edge weights.
-    // Back of the envelope calculations indicate
-    //  magic = 2 - 2/(b + 1).
-    // Experimental evidence suggests the exponent is around 1.7 to 2.
-    // This gives a magic range of [1.25, 1.33] which fits with what 
-    // we observed.
-    double magic = 1.25;
-    if (hi == hj || pow(ej.wt, magic) >= ei.wt) {
-      // Advance j, H2 and H3 cases (at least two heavy)
-      // Check for P2s with incoming ej
+// TODO: COMPUTE THE MAGIC EXPONENT THROUGH SOME THEORY
+// This exponent should be roughly 2 - O(poly(1/beta)), where beta is 
+// the exponent of the power law governing the edge weights.
+// Back of the envelope calculations indicate
+//  magic = 2 - 2/(b + 1).
+// Experimental evidence suggests the exponent is around 1.7 to 2.
+// This gives a magic range of [1.25, 1.33] which fits with what 
+// we observed.
+double magic = 1.25;
+if (hi == hj || pow(ej.wt, magic) >= ei.wt) {
+// Advance j, H2 and H3 cases (at least two heavy)
+// Check for P2s with incoming ej
 
-      for (const auto& e : Gh[ej.src]) {
-        long long wt = search(e.dst, ej.dst);
-        if (wt) {
-          long long weight = ej.wt + e.wt + wt;
-          weighted_triangle T(e.dst, ej.dst, ej.src, weight);
-          if (weight >= threshold) {
-            topk.insert(T);
-          } else {
-            auto it = counter.insert(T).first;
-            if (*it < *curr) {
-              curr = it;
-            }
-          }
-          num_tris++;
-        }
-      }
-
-      for (const auto& e : Gh[ej.dst]) {
-        long long wt = search(e.dst, ej.src);
-        if (wt) {
-          long long weight = ej.wt + e.wt + wt;
-          weighted_triangle T(e.dst, ej.dst, ej.src, weight);
-          if (weight >= threshold) {
-            topk.insert(T);
-          } else {
-            auto it = counter.insert(T).first;
-            if (*it < *curr) {
-              curr = it;
-            }
-          }
-          num_tris++;
-        }
-      }
-
-      // Check for all 3 heavy
-      for (const auto& e : Gh[ej.src]) {
-        vert_to_wt[e.dst] = e.wt;
-      }
-      for (const auto& e : Gh[ej.dst]) {
-        if (vert_to_wt[e.dst]) {
-          long long weight = ej.wt + e.wt + vert_to_wt[e.dst];
-          weighted_triangle T(e.dst, ej.src, ej.dst, weight);
-          if (weight >= threshold) {
-            topk.insert(T);
-          } else {
-            auto it = counter.insert(T).first;
-            if (*it < *curr) {
-              curr = it;
-            }
-          }
-          num_tris++;
-        }
-      }
-      for (const auto& e : Gh[ej.src]) {
-        vert_to_wt[e.dst] = 0;
-      }
-
-      // Remove from light edges
-      hj++;
-
-      deleted[ej.src].insert(ej.dst);
-      deleted[ej.dst].insert(ej.src);
-      Gh[ej.src].push_back({ej.dst, ej.wt});
-      Gh[ej.dst].push_back({ej.src, ej.wt});
-    } else {
-      // Advance i, H1 case (exactly 1 heavy)
-      compute_exists_per_node(ei.src);
-      compute_exists_per_node(ei.dst);
-      for (const auto& kv : exists[ei.src]) {
-        vert_to_wt[kv.first] = kv.second;
-      }
-      for (const auto& kv : exists[ei.dst]) {
-        if (vert_to_wt[kv.first]) {
-          long long weight = ei.wt + kv.second + vert_to_wt[kv.first];
-          weighted_triangle T(kv.first, ei.src, ei.dst, weight);
-          if (weight >= threshold) {
-            topk.insert(T);
-          } else {
-            auto it = counter.insert(T).first;
-            if (*it < *curr) {
-              curr = it;
-            }
-          }
-          num_tris++;
-        }
-      }
-      for (const auto& kv : exists[ei.src]) {
-        vert_to_wt[kv.first] = 0;
-      }
-      hi++;
-    }
-
-    while (curr != counter.end() && curr->weight >= threshold) {
-      topk.insert(*curr);
-      auto prev = curr;
-      curr++;
-      if (prev != counter.begin()) {
-        counter.erase(prev);
-      }
-    }
-    if (curr == counter.end()) {
-      curr--;
+for (const auto& e : Gh[ej.src]) {
+long long wt = search(e.dst, ej.dst);
+if (wt) {
+  long long weight = ej.wt + e.wt + wt;
+  weighted_triangle T(e.dst, ej.dst, ej.src, weight);
+  if (weight >= threshold) {
+    topk.insert(T);
+  } else {
+    auto it = counter.insert(T).first;
+    if (*it < *curr) {
+      curr = it;
     }
   }
-  // Removing the dummy triangle of weight INF. There should be one
-  // in topk as well. So topk actually has one fewer triangle than it reports.
-  counter.erase(counter.begin());
-  topk.erase(topk.begin());
+  num_tris++;
+}
+}
 
-  cerr << "Found " << num_tris << " triangles. " << endl;
-  cerr << "Out of these, the top " << int(topk.size()) << " are found for sure." << endl;
-  if (topk.size()) cerr << "The maximum weight triangle was " << *topk.begin() << endl;
-
-  double tot_time = (clock() - st) / CLOCKS_PER_SEC;
-  cerr << "Total Time (s): " << tot_time << endl;
-  cerr << endl;
-
-  // Augment topk with curr if returning as many as we want
-  if (keep_all) {
-    for (const auto& T : counter) {
+for (const auto& e : Gh[ej.dst]) {
+  long long wt = search(e.dst, ej.src);
+  if (wt) {
+    long long weight = ej.wt + e.wt + wt;
+    weighted_triangle T(e.dst, ej.dst, ej.src, weight);
+    if (weight >= threshold) {
       topk.insert(T);
+    } else {
+      auto it = counter.insert(T).first;
+      if (*it < *curr) {
+        curr = it;
+      }
+    }
+    num_tris++;
+  }
+}
+
+// Check for all 3 heavy
+for (const auto& e : Gh[ej.src]) {
+  vert_to_wt[e.dst] = e.wt;
+}
+for (const auto& e : Gh[ej.dst]) {
+  if (vert_to_wt[e.dst]) {
+    long long weight = ej.wt + e.wt + vert_to_wt[e.dst];
+    weighted_triangle T(e.dst, ej.src, ej.dst, weight);
+    if (weight >= threshold) {
+      topk.insert(T);
+    } else {
+      auto it = counter.insert(T).first;
+      if (*it < *curr) {
+        curr = it;
+      }
+    }
+    num_tris++;
+  }
+}
+for (const auto& e : Gh[ej.src]) {
+  vert_to_wt[e.dst] = 0;
+}
+
+// Remove from light edges
+hj++;
+
+deleted[ej.src].insert(ej.dst);
+deleted[ej.dst].insert(ej.src);
+Gh[ej.src].push_back({ej.dst, ej.wt});
+Gh[ej.dst].push_back({ej.src, ej.wt});
+} else {
+  // Advance i, H1 case (exactly 1 heavy)
+  compute_exists_per_node(ei.src);
+  compute_exists_per_node(ei.dst);
+  for (const auto& kv : exists[ei.src]) {
+    vert_to_wt[kv.first] = kv.second;
+  }
+  for (const auto& kv : exists[ei.dst]) {
+    if (vert_to_wt[kv.first]) {
+      long long weight = ei.wt + kv.second + vert_to_wt[kv.first];
+      weighted_triangle T(kv.first, ei.src, ei.dst, weight);
+      if (weight >= threshold) {
+        topk.insert(T);
+      } else {
+        auto it = counter.insert(T).first;
+        if (*it < *curr) {
+          curr = it;
+        }
+      }
+      num_tris++;
     }
   }
-  return topk;
+  for (const auto& kv : exists[ei.src]) {
+    vert_to_wt[kv.first] = 0;
+  }
+  hi++;
+}
+
+while (curr != counter.end() && curr->weight >= threshold) {
+  topk.insert(*curr);
+  auto prev = curr;
+  curr++;
+  if (prev != counter.begin()) {
+    counter.erase(prev);
+  }
+}
+if (curr == counter.end()) {
+  curr--;
+}
+}
+// Removing the dummy triangle of weight INF. There should be one
+// in topk as well. So topk actually has one fewer triangle than it reports.
+counter.erase(counter.begin());
+topk.erase(topk.begin());
+
+cerr << "Found " << num_tris << " triangles. " << endl;
+cerr << "Out of these, the top " << int(topk.size()) << " are found for sure." << endl;
+if (topk.size()) cerr << "The maximum weight triangle was " << *topk.begin() << endl;
+
+double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+cerr << "Total Time (s): " << tot_time << endl;
+cerr << endl;
+
+// Augment topk with curr if returning as many as we want
+if (keep_all) {
+  for (const auto& T : counter) {
+    topk.insert(T);
+  }
+}
+return topk;
 }
 
 // Same as adaptive heavy light EXCEPT the magic 

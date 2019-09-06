@@ -12,7 +12,7 @@ using namespace wsdm_2019_graph;
 
 DEFINE_string(filename, "", "Path to graph file.");
 DEFINE_string(format, "", "If binary is false this is required and indicates format of graph file. One of weighted, temporal, simplicial.");
-DEFINE_string(binary_path, "", "Path to output file.")
+DEFINE_string(binary_path, "", "Path to output file.");
 
 int main(int argc, char* argv[]) {
   string usage("Convert graph file to binary format.\n"
@@ -24,10 +24,10 @@ int main(int argc, char* argv[]) {
   google::SetUsageMessage(usage);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-	if (FLAGS_filename.empty()) {
-		std::cerr << "No file specified! Type ./convert_data --help for a description of the program parameters." << std::endl;
-		return 0;
-	}
+  if (FLAGS_filename.empty()) {
+    std::cerr << "No file specified! Type ./convert_data --help for a description of the program parameters." << std::endl;
+    return 0;
+  }
 
   ios::sync_with_stdio(0);
   cin.tie(0);
