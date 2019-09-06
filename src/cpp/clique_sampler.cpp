@@ -4,52 +4,69 @@
 #include "graph.h"
 #include "clique_sampler.h"
 #include "triangle_sampler.h"
+#include "gflags/gflags.h"
 
 using namespace std;
 using namespace wsdm_2019_graph;
 
-#define PRINT_ARGS 1
 #define PRINT_STATISTICS 0
 
+DEFINE_string(filename, "", "Path to graph file.");
+DEFINE_bool(binary, true, "Flag for if graph is in our binary format.");
+DEFINE_int32(clique_size, 4, "The size of the clique.");
+DEFINE_int32(nsamples, 0, "Number of samples for clique edge sampler.");
+DEFINE_bool(print_statistics, false, "Prints extra debug statistics about the graph.");
+
 int main(int argc, char* argv[]) {
+	std::string usage("Edge based clique sampler.\n"
+			"Sample usage:\n"
+			"\t./clique_sampler -filename=[fill_this_in] "
+			"-binary=true -clique_size=4 -nsamples=100 \n"
+			"Additionally, these flags can be loaded from a single file "
+			"with the option -flagfile=[filename].");
+
+	google::SetUsageMessage(usage);
+	google::ParseCommandLineFlags(&argc, &argv, true);
+
+	if (FLAGS_filename.empty()) {
+		std::cerr << "No file specified! Type ./clique_sampler --help for a description of the program parameters." << std::endl;
+		return 0;
+	}
+
     ios::sync_with_stdio(0);
     cin.tie(0);
     srand(0); 
 
-    auto GS = read_graph(argv[1], true);
-    int NUM_SAMPLES_EDGE = atoi(argv[2]);
-    int CLIQUE_SIZE = atoi(argv[3]);
-    int NUM_SAMPLES_CLIQUE = atoi(argv[4]);
+    auto GS = read_graph(FLAGS_filename, true);
+    int CLIQUE_SIZE = FLAGS_clique_size;
+    int NUM_SAMPLES_CLIQUE = FLAGS_nsamples;
 
-#if PRINT_ARGS
     cerr << "=============================================" << endl;
     cerr << "ARGUMENTS" << endl;
     cerr << "=============================================" << endl;
     cerr << "Dataset: " << argv[1] << endl;
-    cerr << "NUM_SAMPLES_EDGE: " << NUM_SAMPLES_EDGE << endl;
     cerr << "CLIQUE_SIZE, NSAMPS: " << CLIQUE_SIZE << " " << NUM_SAMPLES_CLIQUE << endl;
-#endif
 
-#if PRINT_STATISTICS
-    cerr << "=============================================" << endl;
-    cerr << "Computing graph statistics" << endl;
-    cerr << "=============================================" << endl;
-    cerr << "Computing degeneracy..." << endl;
-    auto retval = compute_degeneracy(G);
-    auto degenOrder = retval.degenOrder;
-    auto degeneracy = (--retval.degenFreq.end())->first;
+    if (FLAGS_print_statistics) {
+	    cerr << "=============================================" << endl;
+	    cerr << "Computing graph statistics" << endl;
+	    cerr << "=============================================" << endl;
+	    cerr << "Computing degeneracy..." << endl;
+	    auto retval = compute_degeneracy(GS.G);
+	    auto degenOrder = retval.degenOrder;
+	    auto degeneracy = (--retval.degenFreq.end())->first;
 
-    cerr << "Degeneracy distribution:" << endl;
-    double sum = 0, num = 0;
-    for (const auto& kv : retval.degenFreq) {
-        //cerr << kv.first << " " << kv.second << endl;
-        sum += kv.first * kv.second;
-        num += kv.second;
-    }
-    cerr << "Average degeneracy: " << sum / num << endl;
-    cerr << "Degeneracy: " << degeneracy << endl;
-    cerr << endl;
-#endif
+	    cerr << "Degeneracy distribution:" << endl;
+	    double sum = 0, num = 0;
+	    for (const auto& kv : retval.degenFreq) {
+	        //cerr << kv.first << " " << kv.second << endl;
+	        sum += kv.first * kv.second;
+	        num += kv.second;
+	    }
+	    cerr << "Average degeneracy: " << sum / num << endl;
+	    cerr << "Degeneracy: " << degeneracy << endl;
+	    cerr << endl;
+	}
 
     int nthreads = thread::hardware_concurrency();
 
@@ -58,10 +75,6 @@ int main(int argc, char* argv[]) {
     // auto wedge_sampling_tri = wedge_sampler(GS, NUM_SAMPLES_WEDGE);
     // auto path_sampling_tri = path_sampler(GS, NUM_SAMPLES_PATH);
     // auto heavy_light_sampling_tri = heavy_light_sampler(GS, 0.05);
-    auto auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, 1000);
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    auto adaptive_heavy_light_tri = adaptive_heavy_light(GS, 1000);
-    auto_thresholded_heavy_light_tri = auto_thresholded_heavy_light(GS, 1000);
 
     if (CLIQUE_SIZE > 1) {
         auto sampled_cliques = clique_sampler(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);

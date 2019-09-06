@@ -1,35 +1,40 @@
 src = $(wildcard *.cpp)
+headers = $(wildcard *.h)
 obj = $(src:.cpp=.o)
 exe = $(src:.cpp=)
 
-LDFLAGS = -fopenmp
-CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall -I./ #-D_GLIBCXX_PARALLEL
+LDFLAGS = -fopenmp -fPIC
+CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall -fPIC -I./ #-D_GLIBCXX_PARALLEL
+OBJ_GFLAGS = $(addprefix gflags/, gflags.o gflags_nc.o gflags_completions.o gflags_reporting.o)
 
-test_reading: test_reading.o
+gflags/%.o: include/gflags/%.cc
+	$(CXX) -c $(DEBUG) $(CXXFLAGS) $< -o $@
+
+test_reading: $(OBJ_GFLAGS) $(headers) test_reading.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-convert_data: convert_data.o
+convert_data: $(OBJ_GFLAGS) $(headers) convert_data.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-brute_force_enumerator: brute_force_enumerator.o
+brute_force_enumerator: $(OBJ_GFLAGS) $(headers) brute_force_enumerator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-clique_sampler: clique_sampler.o
+clique_sampler: $(OBJ_GFLAGS) $(headers) clique_sampler.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-compare_deterministic: compare_deterministic.o
+compare_deterministic: $(OBJ_GFLAGS) $(headers) compare_deterministic.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-compare_sampling: compare_sampling.o
+compare_sampling: $(OBJ_GFLAGS) $(headers) compare_sampling.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-static_heavy_light: static_heavy_light.o
+static_heavy_light: $(OBJ_GFLAGS) $(headers) static_heavy_light.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-compare_parallel_sampling: compare_parallel_sampling.o
+compare_parallel_sampling: $(OBJ_GFLAGS) $(headers) compare_parallel_sampling.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-print_edge_weights: print_edge_weights.o
+print_edge_weights: $(OBJ_GFLAGS) $(headers) print_edge_weights.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	
 all: $(exe)
