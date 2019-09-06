@@ -13,8 +13,9 @@ This code accompanies the paper
 ## Datasets
 
 Download the datasets from [this
-webpage](http://www.cs.cornell.edu/~arb/data/index.html). **TODO**: Place
-them in a particular folder?
+webpage](http://www.cs.cornell.edu/~arb/data/index.html).
+Our scripts assume that the binary files (described below) are in the
+`data` folder, but the scripts can be edited to specify a custom path.
 
 ## Code
 
@@ -33,13 +34,15 @@ nodes (n) and the second line of the file is an integer representing the
 number of edges (m). The remaining 3m lines describe the edges. Lines 3i + 2
 and 3i + 3 are integers representing endpoints of the ith edge and line 3i +
 4 is a long long representing the weight of the ith edge. The details of the
-compression can be found in the code documentation. **TODO**: Do we want to
-talk about details of compression here?
-
-This leads to significant benefit, especially when running multiple
-experiments. For example, reading in the raw txt file for Spotify took almost
-1.5 hours whereas reading in our compressed binary file only took around 5
-minutes.
+compression can be found in the code documentation.
+Essentially, we reduce the number of bytes needed in 2 ways. First, we relabel
+nodes so that high degree nodes are assigned a smaller label. If this label
+can be represented in less than 4 bytes then we read / write only those number
+of bytes. Additionally, since a majority of the weights are small we do not
+always need 4 bytes to represent them either. This leads to significant benefit,
+especially when running multiple experiments. For example, reading in the raw txt
+file for Spotify took almost 1.5 hours whereas reading in our compressed binary
+file only took around 5 minutes.
 
 ### Code structure
 The following files in the `src/cpp` directory implement data reading,
