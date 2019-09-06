@@ -13,8 +13,9 @@ This code accompanies the paper
 ## Datasets
 
 Download the datasets from [this
-webpage](http://www.cs.cornell.edu/~arb/data/index.html). **TODO**: Place
-them in a particular folder?
+webpage](http://www.cs.cornell.edu/~arb/data/index.html).
+Our scripts assume that the binary files (described below) are in the
+`data` folder, but the scripts can be edited to specify a custom path.
 
 ## Code
 
