@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     } else if (sampler.find("wedge") != string::npos) {
       sampling_tri = (wedge_parallel_time_version(GS, thread::hardware_concurrency(), cur_time, -1, false));
     } else if (sampler.find("path") != string::npos) {
-      // TODO: Implement path_parallel_time_version.
+      sampling_tri = (path_parallel_time_version(GS, thread::hardware_concurrency(), cur_time, -1, false));
     } else {
       cerr << "Unrecognized sampler." << endl;
     }
