@@ -25,14 +25,14 @@ datasets = [
 ]
 
 l_sort = 7
-l_shl_alg = 27
-l_dhl_pre = 32
-l_dhl_alg = 36
-l_auto_pre = 41
-l_auto_alg = 45
-l_brute = 52
-l_shl_acc = 59
-spot_shl_acc = 52
+l_shl_alg = 28
+l_dhl_pre = 33
+l_dhl_alg = 37
+l_auto_pre = 42
+l_auto_alg = 46
+l_brute = 53
+l_shl_acc = 60
+spot_shl_acc = 53
 
 edge_sort = 7
 
