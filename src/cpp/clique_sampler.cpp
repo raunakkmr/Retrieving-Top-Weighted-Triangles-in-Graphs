@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   cerr << "=============================================" << endl;
   cerr << "ARGUMENTS" << endl;
   cerr << "=============================================" << endl;
-  cerr << "Dataset: " << argv[1] << endl;
+  cerr << "Dataset: " << FLAGS_filename << endl;
   cerr << "CLIQUE_SIZE, NSAMPS: " << CLIQUE_SIZE << " " << NUM_SAMPLES_CLIQUE << endl;
 
   if (FLAGS_print_statistics) {
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   // auto heavy_light_sampling_tri = heavy_light_sampler(GS, 0.05);
 
   if (CLIQUE_SIZE > 1) {
-    auto sampled_cliques = clique_sampler(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
+    // auto sampled_cliques = clique_sampler(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
     auto sampled_cliques_parallel = clique_sampler_parallel(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE, nthreads);
     auto all_cliques = clique_brute_force(GS.G, CLIQUE_SIZE);
   }

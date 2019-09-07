@@ -207,464 +207,6 @@ namespace wsdm_2019_graph {
     return counter;
   }
 
-  set<weighted_triangle> wedge_sampler_everything(GraphStruct &GS, int max_samples=-1, double max_time=-1, double inc=-1, bool include_setup=true) {
-    cerr << "=============================================" << endl;
-    cerr << "Running wedge sampling for triangles" << endl;
-    cerr << "=============================================" << endl;
-
-    double pre_st = clock();
-
-    Graph &G = GS.G;
-
-    // build sampling distribution over vertices
-    vector<long long> cumulative_weights(G.size());
-    vector<vector<long long>> vertex_cumulative_weights_1(G.size());
-    vector<vector<long long>> vertex_cumulative_weights_2(G.size());
-    long long prev = 0;
-    // todo: replace this with p means
-    for (int i = 0; i < (int) G.size(); i++) {
-      long long vertex_weight = 0;
-      vertex_cumulative_weights_1[i].reserve(G[i].size());
-      vertex_cumulative_weights_2[i].reserve(G[i].size());
-      for (const auto &e : G[i]) {
-        vertex_weight += e.wt;
-        vertex_cumulative_weights_2[i].push_back(vertex_weight);
-      }
-
-      long long total_weight = 0;
-      for (const auto &e : G[i]) {
-        total_weight += G[i].size() * e.wt + vertex_weight;
-        vertex_cumulative_weights_1[i].push_back(total_weight);
-      }
-      // cumulative_weights.push_back(total_weight);
-      // cumulative_weights[cumulative_weights.size() - 1] += prev;
-      // prev = cumulative_weights.back();
-      cumulative_weights[i] = total_weight + prev;
-      prev = cumulative_weights[i];
-    }
-
-    // build an adjacency matrix where a(i, j) = weight of edge (i, j)
-    // TODO: maybe we should lift this out of the functions and make a more general graph structure
-    // vector<unordered_map<int, long long>> weight(G.size());
-    // vector<google::dense_hash_map<int, long long>> weight(G.size());
-    // for (int u = 0; u < (int) G.size(); u++) {
-    //   weight[u].set_empty_key(-1);
-    //   for (const auto &e : G[u]) {
-    //     int v = e.dst;
-    //     long long w = e.wt;
-    //     weight[u][v] = w;
-    //   }
-    // }
-    cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
-
-    double st = clock();
-
-    auto sample_vertex = [&]() {
-      long long s = rand64() % cumulative_weights.back();
-      int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
-      return idx;
-    };
-
-    auto sample_neighbour_1 = [&](int v) {
-      long long s = rand64() % vertex_cumulative_weights_1[v].back();
-      int idx = lower_bound(vertex_cumulative_weights_1[v].begin(), vertex_cumulative_weights_1[v].end(), s) - vertex_cumulative_weights_1[v].begin();
-      return G[v][idx];
-    };
-
-    auto sample_neighbour_2 = [&](int v, long long shift) {
-      long long s = rand64() % (vertex_cumulative_weights_2[v].back() + shift * G[v].size());
-      if (s >= vertex_cumulative_weights_2[v].back()) {
-        return G[v][rand() % G[v].size()];
-      } else {
-        s = rand64() % vertex_cumulative_weights_2[v].back();
-        int idx = lower_bound(vertex_cumulative_weights_2[v].begin(), vertex_cumulative_weights_2[v].end(), s) - vertex_cumulative_weights_2[v].begin();
-        return G[v][idx];
-      }
-    };
-
-    set<weighted_triangle> counter, history;
-    int nsamples = 0;
-    double init_time = include_setup? pre_st : st;
-
-    auto terminate = [&]() {
-      if (max_samples != -1) {
-        return nsamples >= max_samples;
-      } else {
-        double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
-        return tot_time >= max_time;
-      }
-    };
-
-    while (!(terminate())) {
-      int u = sample_vertex();
-      auto ev = sample_neighbour_1(u);
-      auto ew = sample_neighbour_2(u, ev.wt);
-      if (ev.dst == ew.dst) continue;
-      nsamples++;
-
-      if (G[ev.dst].size() > G[ew.dst].size()) {
-        std::swap(ev, ew);
-      }
-
-      for (const auto &e : G[ev.dst]) {
-        if (e.dst == ew.dst) {
-          auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
-          if (history.count(tri) == 0) {
-            history.insert(tri);
-            counter.insert(tri);
-          }
-        }
-      }
-      /*
-         if (weight[ev.dst].count(ew.dst)) {
-// todo: replace with p means
-auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + weight[ev.dst][ew.dst]);
-if (history.count(tri) == 0) {
-history.insert(tri);
-counter.insert(tri);
-}
-}
-       */
-    }
-
-
-    cerr << "Found " << counter.size() << " triangles in counter." << endl;
-    if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
-    cerr << "Total Time (s): " << 1.0 * (clock() - pre_st) / CLOCKS_PER_SEC << endl;
-    return counter;
-
-  }
-
-  vector<weighted_triangle> path_sampler(GraphStruct &GS, int nthreads=1, int max_samples=-1, double max_time=-1, bool include_setup=true) {
-    cerr << "=============================================" << endl;
-    cerr << "Running path sampling for triangles (" << nthreads << " threads)" << endl;
-    cerr << "=============================================" << endl;
-
-    struct timespec pre_start, pre_finish;
-    double pre_elapsed;
-    clock_gettime(CLOCK_MONOTONIC, &pre_start);
-  
-    Graph &G = GS.G;
-    vector<full_edge> &edges = GS.edges;
-  
-    vector<double> weight_sum(G.size());
-    vector<vector<long long>> node_sums(G.size());
-
-    if (nthreads > 1) {
-      omp_set_num_threads(thread::hardware_concurrency());
-    } else {
-      omp_set_nested(1);
-    }
-
-  #pragma omp parallel for
-    for (int u = 0; u < (int) G.size(); u++) {
-      sort(G[u].begin(), G[u].end());
-  
-      long long prev = 0;
-      for (auto e : G[u]) {
-        weight_sum[u] += e.wt;
-        node_sums[u].push_back(prev + e.wt);
-        prev = node_sums[u].back();
-      }
-    }
-  
-    vector<double> sum_edge_weight(GS.m);
-    int count = 0;
-    double prev = 0;
-    for (auto e : edges) {
-      double weight = e.wt * (weight_sum[e.src] - e.wt) * (weight_sum[e.dst] - e.wt);
-      sum_edge_weight[count] = weight + prev;
-      prev = sum_edge_weight[count++];
-    }
-  
-    default_random_engine generator;
-    uniform_real_distribution<double> distribution(0.0, sum_edge_weight.back());
-    auto sample_edge = [&]() {
-      double s = distribution(generator);
-      int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
-      return edges[idx];
-    };
-  
-    clock_gettime(CLOCK_MONOTONIC, &pre_finish);
-    pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
-    pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
-  
-    cerr << "Pre-processing time: " << pre_elapsed << endl;
-  
-    struct timespec start, finish;
-    double tot_time;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    // set<int> sorted_nodes;
-    auto sample_neighbour = [&](int node, int exclude) {
-      int idx;
-      // if (sorted_nodes.count(node) == 0) {
-      //   sort(G[node].begin(), G[node].end());
-      //   sorted_nodes.insert(node);
-      // }
-      // int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, 0}) - G[node].begin();
-      int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, numeric_limits<long long>::max()}) - G[node].begin();
-
-      // Decide whether to sample left side or right side.
-      int s = rand64() % (node_sums[node].back() - G[node][exclude_idx].wt);
-      if (exclude_idx == 0 || s >= node_sums[node][exclude_idx-1]) {
-        // right side
-        s = rand64() % (node_sums[node].back() - node_sums[node][exclude_idx]);
-        idx = lower_bound(node_sums[node].begin() + exclude_idx, node_sums[node].end(), node_sums[node][exclude_idx] + s) - node_sums[node].begin();
-      } else {
-        // left side
-        s = rand64() % node_sums[node][exclude_idx-1];
-        idx = lower_bound(node_sums[node].begin(), node_sums[node].begin() + exclude_idx, s) - node_sums[node].begin();
-      }
-      return G[node][idx];
-    };
-  
-    vector<set<weighted_triangle>> histories;
-    vector<thread> threads(nthreads);
-    vector<vector<weighted_triangle>> counters(nthreads);
-    int nsamples_per_thread = ceil(max_samples / nthreads);
-
-    auto terminate = [&](int nsamples_) {
-      if (max_samples != -1) {
-        return nsamples_ >= nsamples_per_thread;
-      } else {
-        struct timespec cur;
-        double tot_time;
-        clock_gettime(CLOCK_MONOTONIC, &cur);
-        if (include_setup) {
-          tot_time = (cur.tv_sec - pre_start.tv_sec);
-          tot_time += (cur.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
-        } else {
-          tot_time = (cur.tv_sec - start.tv_sec);
-          tot_time += (cur.tv_nsec - start.tv_nsec) / 1000000000.0;
-        }
-        return tot_time >= max_time;
-      }
-    };
-
-    auto sampler = [&](int i) {
-      int nsamples_ = 0;
-      while (!(terminate(nsamples_))) {
-        auto edge = sample_edge();
-        int u = edge.src, v = edge.dst;
-        long long w = edge.wt;
-
-        if (G[u].size() == 1 || G[v].size() == 1) {
-          continue;
-        } 
-    
-        auto c0 = sample_neighbour(u, v);
-        auto c1 = sample_neighbour(v, u);
-        if (c0.dst == c1.dst) {
-          nsamples_++;
-          auto tri = weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w);
-          counters[i].push_back(tri);
-          // if (history.count(tri) == 0) {
-          //   history.insert(tri);
-          //   counter.insert(tri);
-          // }
-        }
-      }
-      sort(counters[i].begin(), counters[i].end());
-    };
-
-    auto parallel_merger = [&](int i, int j) {
-      vector<weighted_triangle> W;
-      W.reserve(counters[i].size() + counters[j].size());
-      int a = 0, b = 0, Li = counters[i].size(), Lj = counters[j].size();
-      while (a < Li && b < Lj) {
-        if (counters[i][a] < counters[j][b]) {
-          if (counters[i][a] != W.back()) {
-            W.push_back(move(counters[i][a]));
-          }
-          a++;
-        } else if (counters[i][a] == counters[j][b]) {
-          if (counters[i][a] != W.back()) {
-            W.push_back(move(counters[i][a]));
-          }
-          a++;
-          b++;
-        } else {
-          if (counters[j][b] != W.back()) {
-            W.push_back(move(counters[j][b]));
-          }
-          b++;
-        }
-      }
-      while (a < Li) {
-        if (counters[i][a] != W.back()) {
-          W.push_back(move(counters[i][a]));
-        }
-        a++;
-      }
-      while (b < Lj) {
-        if (counters[j][b] != W.back()) {
-          W.push_back(move(counters[j][b]));
-        }
-        b++;
-      }
-      counters[i].swap(W);
-    };
-
-    if (nthreads > 1) {
-      for (int i = 0; i < nthreads; i++) {
-        thread th(sampler, i);
-        threads[i] = move(th);
-      }
-      for (int i = 0; i < nthreads; i++) {
-        threads[i].join();
-      }
-    
-      struct timespec merge_start, merge_finish;
-      double merge_elapsed;
-      clock_gettime(CLOCK_MONOTONIC, &merge_start);
-    
-      // Parallel merging.
-
-      int pow2_sz = 1, log2_sz = 0;
-      while (pow2_sz < nthreads) {
-        pow2_sz *= 2;
-        log2_sz++;
-      }
-    
-      for (int i = counters.size(); i < pow2_sz; i++) {
-        counters.push_back(vector<weighted_triangle>());
-      }
-    
-      vector<thread> merge_threads(pow2_sz);
-      int val = 1;
-      for (int level = 1; level < log2_sz+1; level++) {
-        val *= 2;
-        for (int i = 0; i < (int) counters.size()/val; i++) {
-          thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
-          merge_threads[i*val] = move(merge_th);
-        }
-        for (int i = 0; i < (int) counters.size()/val; i++) {
-          merge_threads[i*val].join();
-        }
-      }
-    
-      clock_gettime(CLOCK_MONOTONIC, &merge_finish);
-      merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
-      merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
-      cerr << "Merge time: " << merge_elapsed << endl;
-    } else {
-      sampler(0);
-    }
-
-    cerr << "Found " << counters[0].size() << " triangles." << endl;
-    if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
-  
-    clock_gettime(CLOCK_MONOTONIC, &finish);
-    tot_time = (finish.tv_sec - start.tv_sec);
-    tot_time += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-    cerr << "Total Time (s): " << tot_time << endl;
-    // cerr << "Time per sample (s): " << tot_time / nsamples << endl;
-    cerr << endl;
-  
-    return counters[0];
-  }
-
-  set<weighted_triangle> path_sampler_everything(GraphStruct &GS, int max_samples=-1, double max_time=-1, double inc=-1, bool include_setup=true) {
-    cerr << "=============================================" << endl;
-    cerr << "Running path sampling for triangles" << endl;
-    cerr << "=============================================" << endl;
-  
-    double pre_st = clock();
-  
-    Graph &G = GS.G;
-    vector<full_edge> &edges = GS.edges;
-  
-    vector<double> weight_sum(G.size());
-    vector<vector<long long>> node_sums(G.size());
-    for (int u = 0; u < (int) G.size(); u++) {
-      sort(G[u].begin(), G[u].end());
-  
-      long long prev = 0;
-      for (auto e : G[u]) {
-        weight_sum[u] += e.wt;
-        node_sums[u].push_back(prev + e.wt);
-        prev = node_sums[u].back();
-      }
-    }
-  
-    vector<double> sum_edge_weight(GS.m);
-    int count = 0;
-    double prev = 0;
-    for (auto e : edges) {
-      double weight = e.wt * (weight_sum[e.src] - e.wt) * (weight_sum[e.dst] - e.wt);
-      // sum_edge_weight.push_back(weight + prev);
-      // prev = sum_edge_weight.back();
-      sum_edge_weight[count] = weight + prev;
-      prev = sum_edge_weight[count++];
-    }
-  
-    default_random_engine generator;
-    uniform_real_distribution<double> distribution(0.0, sum_edge_weight.back());
-    auto sample_edge = [&]() {
-      double s = distribution(generator);
-      int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
-      return edges[idx];
-    };
-    cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
-  
-    double st = clock();
-  
-    auto sample_neighbour = [&](int node, int exclude) {
-      int idx;
-      int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, 0}) - G[node].begin();
-  
-      // decide whether to sample left side or right side.
-      int s = rand64() % (node_sums[node].back() - G[node][exclude_idx].wt);
-      if (exclude_idx == 0 || s >= node_sums[node][exclude_idx-1]) {
-        // right side
-        s = rand64() % (node_sums[node].back() - node_sums[node][exclude_idx]);
-        idx = lower_bound(node_sums[node].begin() + exclude_idx, node_sums[node].end(), node_sums[node][exclude_idx] + s) - node_sums[node].begin();
-      } else {
-        // left side
-        s = rand64() % node_sums[node][exclude_idx-1];
-        idx = lower_bound(node_sums[node].begin(), node_sums[node].begin() + exclude_idx, s) - node_sums[node].begin();
-      }
-      return G[node][idx];
-    };
-  
-    set<weighted_triangle> counter, history;
-    int nsamples = 0;
-    double init_time = include_setup? pre_st : st;
-  
-    auto terminate = [&]() {
-      if (max_samples != -1) {
-        return nsamples >= max_samples;
-      } else {
-        double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
-        return tot_time >= max_time;
-      }
-    };
-  
-    while (!(terminate())) {
-      auto edge = sample_edge();
-      int u = edge.src, v = edge.dst;
-      long long w = edge.wt;
-  
-      auto c0 = sample_neighbour(u, v);
-      auto c1 = sample_neighbour(v, u);
-      if (c0.dst == c1.dst) {
-        nsamples++;
-        auto tri = weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w);
-        if (history.count(tri) == 0) {
-          history.insert(tri);
-          counter.insert(tri);
-        }
-      }
-    }
-  
-    cerr << "Found " << counter.size() << " triangles in counter." << endl;
-    if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
-    cerr << "Total Time (s): " << 1.0 * (clock() - pre_st) / CLOCKS_PER_SEC << endl;
-    return counter;
-  
-  }
-
   vector<weighted_triangle> edge_sampler(GraphStruct &GS, int nthreads=1, int max_samples=-1, double max_time=-1, bool include_setup=true) {
     cerr << "=============================================" << endl;
     cerr << "Running edge sampling for triangles (" << nthreads << " threads)" << endl;
@@ -1153,63 +695,55 @@ counter.insert(tri);
     return counters[0];
   }
 
-  vector<weighted_triangle> wedge_sampler_parallel_everything(GraphStruct &GS, int nthreads, int max_samples=-1, double max_time=-1, double inc=-1, bool include_setup=true) {
+  vector<weighted_triangle> path_sampler(GraphStruct &GS, int nthreads=1, int max_samples=-1, double max_time=-1, bool include_setup=true) {
     cerr << "=============================================" << endl;
-    cerr << "Running parallel wedge sampling for triangles (" << nthreads << " threads)" << endl;
+    cerr << "Running path sampling for triangles (" << nthreads << " threads)" << endl;
     cerr << "=============================================" << endl;
+
     struct timespec pre_start, pre_finish;
     double pre_elapsed;
     clock_gettime(CLOCK_MONOTONIC, &pre_start);
   
     Graph &G = GS.G;
+    vector<full_edge> &edges = GS.edges;
   
-    // build sampling distribution over vertices
-    vector<long long> cumulative_weights(G.size());
-    vector<vector<long long>> vertex_cumulative_weights_1(G.size());
-    vector<vector<long long>> vertex_cumulative_weights_2(G.size());
-    long long prev = 0;
-    // todo: replace this with p means
-    omp_set_num_threads(thread::hardware_concurrency());
-    //omp_set_nested(1);
-  
+    vector<double> weight_sum(G.size());
+    vector<vector<long long>> node_sums(G.size());
+
+    if (nthreads > 1) {
+      omp_set_num_threads(thread::hardware_concurrency());
+    } else {
+      omp_set_nested(1);
+    }
+
   #pragma omp parallel for
-    for (int i = 0; i < (int) G.size(); i++) {
-      long long vertex_weight = 0;
-      vertex_cumulative_weights_1[i].reserve(G[i].size());
-      vertex_cumulative_weights_2[i].reserve(G[i].size());
-      for (const auto &e : G[i]) {
-        vertex_weight += e.wt;
-        vertex_cumulative_weights_2[i].push_back(vertex_weight);
-      }
+    for (int u = 0; u < (int) G.size(); u++) {
+      sort(G[u].begin(), G[u].end());
   
-      long long total_weight = 0;
-      for (const auto &e : G[i]) {
-        total_weight += G[i].size() * e.wt + vertex_weight;
-        vertex_cumulative_weights_1[i].push_back(total_weight);
+      long long prev = 0;
+      for (auto e : G[u]) {
+        weight_sum[u] += e.wt;
+        node_sums[u].push_back(prev + e.wt);
+        prev = node_sums[u].back();
       }
     }
   
-    for (int i = 0; i < (int) G.size(); i++) {
-      cumulative_weights[i] = vertex_cumulative_weights_2[i].back() + prev;
-      prev = cumulative_weights[i];
+    vector<double> sum_edge_weight(GS.m);
+    int count = 0;
+    double prev = 0;
+    for (auto e : edges) {
+      double weight = e.wt * (weight_sum[e.src] - e.wt) * (weight_sum[e.dst] - e.wt);
+      sum_edge_weight[count] = weight + prev;
+      prev = sum_edge_weight[count++];
     }
   
-    // build an adjacency matrix where a(i, j) = weight of edge (i, j)
-    // TODO: maybe we should lift this out of the functions and make a more general graph structure
-    // vector<unordered_map<int, long long>> weight(G.size());
-    // vector<google::dense_hash_map<int, long long>> weight(G.size());
-    // for (int u = 0; u < (int) G.size(); u++) {
-    //   weight[u].set_empty_key(-1);
-    //   for (const auto &e : G[u]) {
-    //     int v = e.dst;
-    //     long long w = e.wt;
-    //     weight[u][v] = w;
-    //   }
-    // }
-  
-    vector<thread> threads(nthreads);
-    vector<vector<weighted_triangle>> counters(nthreads);
-    int nsamples_per_thread = ceil(max_samples / nthreads);
+    default_random_engine generator;
+    uniform_real_distribution<double> distribution(0.0, sum_edge_weight.back());
+    auto sample_edge = [&]() {
+      double s = distribution(generator);
+      int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
+      return edges[idx];
+    };
   
     clock_gettime(CLOCK_MONOTONIC, &pre_finish);
     pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
@@ -1220,30 +754,36 @@ counter.insert(tri);
     struct timespec start, finish;
     double tot_time;
     clock_gettime(CLOCK_MONOTONIC, &start);
-  
-    auto sample_vertex = [&]() {
-      long long s = rand64() % cumulative_weights.back();
-      int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
-      return idx;
-    };
-  
-    auto sample_neighbour_1 = [&](int v) {
-      long long s = rand64() % vertex_cumulative_weights_1[v].back();
-      int idx = lower_bound(vertex_cumulative_weights_1[v].begin(), vertex_cumulative_weights_1[v].end(), s) - vertex_cumulative_weights_1[v].begin();
-      return G[v][idx];
-    };
-  
-    auto sample_neighbour_2 = [&](int v, long long shift) {
-      long long s = rand64() % (vertex_cumulative_weights_2[v].back() + shift * G[v].size());
-      if (s >= vertex_cumulative_weights_2[v].back()) {
-        return G[v][rand() % G[v].size()];
+
+    // set<int> sorted_nodes;
+    auto sample_neighbour = [&](int node, int exclude) {
+      int idx;
+      // if (sorted_nodes.count(node) == 0) {
+      //   sort(G[node].begin(), G[node].end());
+      //   sorted_nodes.insert(node);
+      // }
+      // int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, 0}) - G[node].begin();
+      int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, numeric_limits<long long>::max()}) - G[node].begin();
+
+      // Decide whether to sample left side or right side.
+      int s = rand64() % (node_sums[node].back() - G[node][exclude_idx].wt);
+      if (exclude_idx == 0 || s >= node_sums[node][exclude_idx-1]) {
+        // right side
+        s = rand64() % (node_sums[node].back() - node_sums[node][exclude_idx]);
+        idx = lower_bound(node_sums[node].begin() + exclude_idx, node_sums[node].end(), node_sums[node][exclude_idx] + s) - node_sums[node].begin();
       } else {
-        s = rand64() % vertex_cumulative_weights_2[v].back();
-        int idx = lower_bound(vertex_cumulative_weights_2[v].begin(), vertex_cumulative_weights_2[v].end(), s) - vertex_cumulative_weights_2[v].begin();
-        return G[v][idx];
+        // left side
+        s = rand64() % node_sums[node][exclude_idx-1];
+        idx = lower_bound(node_sums[node].begin(), node_sums[node].begin() + exclude_idx, s) - node_sums[node].begin();
       }
+      return G[node][idx];
     };
   
+    vector<set<weighted_triangle>> histories;
+    vector<thread> threads(nthreads);
+    vector<vector<weighted_triangle>> counters(nthreads);
+    int nsamples_per_thread = ceil(max_samples / nthreads);
+
     auto terminate = [&](int nsamples_) {
       if (max_samples != -1) {
         return nsamples_ >= nsamples_per_thread;
@@ -1261,48 +801,33 @@ counter.insert(tri);
         return tot_time >= max_time;
       }
     };
-  
-    auto parallel_sampler = [&](int i) {
+
+    auto sampler = [&](int i) {
       int nsamples_ = 0;
-      while (!terminate(nsamples_)) {
-        int u = sample_vertex();
-        auto ev = sample_neighbour_1(u);
-        auto ew = sample_neighbour_2(u, ev.wt);
-        if (ev.dst == ew.dst) continue;
-        nsamples_++;
-  
-        if (G[ev.dst].size() > G[ew.dst].size()) {
-          std::swap(ev, ew);
+      while (!(terminate(nsamples_))) {
+        auto edge = sample_edge();
+        int u = edge.src, v = edge.dst;
+        long long w = edge.wt;
+
+        if (G[u].size() == 1 || G[v].size() == 1) {
+          continue;
+        } 
+    
+        auto c0 = sample_neighbour(u, v);
+        auto c1 = sample_neighbour(v, u);
+        if (c0.dst == c1.dst) {
+          nsamples_++;
+          auto tri = weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w);
+          counters[i].push_back(tri);
+          // if (history.count(tri) == 0) {
+          //   history.insert(tri);
+          //   counter.insert(tri);
+          // }
         }
-  
-        for (const auto &e : G[ev.dst]) {
-          if (e.dst == ew.dst) {
-            auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
-            counters[i].push_back(tri);
-            break;
-          }
-        }
-        /*
-           if (weight[ev.dst].count(ew.dst)) {
-        // todo: replace with p means
-        auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + weight[ev.dst][ew.dst]);
-  
-        bool cont = false;
-        for (int j = 0; j < nthreads; j++) {
-        if (histories[j].count(tri)) {
-        cont = true;
-        break;
-        }
-        }
-        if (cont) continue;
-        histories[i].insert(tri);
-        counters[i].push_back(tri);
-        }
-         */
       }
       sort(counters[i].begin(), counters[i].end());
     };
-  
+
     auto parallel_merger = [&](int i, int j) {
       vector<weighted_triangle> W;
       W.reserve(counters[i].size() + counters[j].size());
@@ -1340,49 +865,53 @@ counter.insert(tri);
       }
       counters[i].swap(W);
     };
-  
-    for (int i = 0; i < nthreads; i++) {
-      thread th(parallel_sampler, i);
-      threads[i] = move(th);
-    }
-    for (int i = 0; i < nthreads; i++) {
-      threads[i].join();
-    }
-  
-    struct timespec merge_start, merge_finish;
-    double merge_elapsed;
-    clock_gettime(CLOCK_MONOTONIC, &merge_start);
-  
-    // Parallel merging.
-  
-    int pow2_sz = 1, log2_sz = 0;
-    while (pow2_sz < nthreads) {
-      pow2_sz *= 2;
-      log2_sz++;
-    }
-  
-    for (int i = counters.size(); i < pow2_sz; i++) {
-      counters.push_back(vector<weighted_triangle>());
-    }
-  
-    vector<thread> merge_threads(pow2_sz);
-    int val = 1;
-    for (int level = 1; level < log2_sz+1; level++) {
-      val *= 2;
-      for (int i = 0; i < (int) counters.size()/val; i++) {
-        thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
-        merge_threads[i*val] = move(merge_th);
+
+    if (nthreads > 1) {
+      for (int i = 0; i < nthreads; i++) {
+        thread th(sampler, i);
+        threads[i] = move(th);
       }
-      for (int i = 0; i < (int) counters.size()/val; i++) {
-        merge_threads[i*val].join();
+      for (int i = 0; i < nthreads; i++) {
+        threads[i].join();
       }
+    
+      struct timespec merge_start, merge_finish;
+      double merge_elapsed;
+      clock_gettime(CLOCK_MONOTONIC, &merge_start);
+    
+      // Parallel merging.
+
+      int pow2_sz = 1, log2_sz = 0;
+      while (pow2_sz < nthreads) {
+        pow2_sz *= 2;
+        log2_sz++;
+      }
+    
+      for (int i = counters.size(); i < pow2_sz; i++) {
+        counters.push_back(vector<weighted_triangle>());
+      }
+    
+      vector<thread> merge_threads(pow2_sz);
+      int val = 1;
+      for (int level = 1; level < log2_sz+1; level++) {
+        val *= 2;
+        for (int i = 0; i < (int) counters.size()/val; i++) {
+          thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
+          merge_threads[i*val] = move(merge_th);
+        }
+        for (int i = 0; i < (int) counters.size()/val; i++) {
+          merge_threads[i*val].join();
+        }
+      }
+    
+      clock_gettime(CLOCK_MONOTONIC, &merge_finish);
+      merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
+      merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
+      cerr << "Merge time: " << merge_elapsed << endl;
+    } else {
+      sampler(0);
     }
-  
-    clock_gettime(CLOCK_MONOTONIC, &merge_finish);
-    merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
-    merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
-    cerr << "Merge time: " << merge_elapsed << endl;
-  
+
     cerr << "Found " << counters[0].size() << " triangles." << endl;
     if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
   
@@ -2266,6 +1795,474 @@ counter.insert(tri);
     cerr << "Total Time (s): " << 1.0 * (clock() - pre_st) / CLOCKS_PER_SEC << endl;
     return counter;
 
+  }
+
+  set<weighted_triangle> path_sampler_everything(GraphStruct &GS, int max_samples=-1, double max_time=-1, double inc=-1, bool include_setup=true) {
+    cerr << "=============================================" << endl;
+    cerr << "Running path sampling for triangles" << endl;
+    cerr << "=============================================" << endl;
+  
+    double pre_st = clock();
+  
+    Graph &G = GS.G;
+    vector<full_edge> &edges = GS.edges;
+  
+    vector<double> weight_sum(G.size());
+    vector<vector<long long>> node_sums(G.size());
+    for (int u = 0; u < (int) G.size(); u++) {
+      sort(G[u].begin(), G[u].end());
+  
+      long long prev = 0;
+      for (auto e : G[u]) {
+        weight_sum[u] += e.wt;
+        node_sums[u].push_back(prev + e.wt);
+        prev = node_sums[u].back();
+      }
+    }
+  
+    vector<double> sum_edge_weight(GS.m);
+    int count = 0;
+    double prev = 0;
+    for (auto e : edges) {
+      double weight = e.wt * (weight_sum[e.src] - e.wt) * (weight_sum[e.dst] - e.wt);
+      // sum_edge_weight.push_back(weight + prev);
+      // prev = sum_edge_weight.back();
+      sum_edge_weight[count] = weight + prev;
+      prev = sum_edge_weight[count++];
+    }
+  
+    default_random_engine generator;
+    uniform_real_distribution<double> distribution(0.0, sum_edge_weight.back());
+    auto sample_edge = [&]() {
+      double s = distribution(generator);
+      int idx = lower_bound(sum_edge_weight.begin(), sum_edge_weight.end(), s) - sum_edge_weight.begin();
+      return edges[idx];
+    };
+    cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+  
+    double st = clock();
+  
+    auto sample_neighbour = [&](int node, int exclude) {
+      int idx;
+      int exclude_idx = lower_bound(G[node].begin(), G[node].end(), half_edge{exclude, 0}) - G[node].begin();
+  
+      // decide whether to sample left side or right side.
+      int s = rand64() % (node_sums[node].back() - G[node][exclude_idx].wt);
+      if (exclude_idx == 0 || s >= node_sums[node][exclude_idx-1]) {
+        // right side
+        s = rand64() % (node_sums[node].back() - node_sums[node][exclude_idx]);
+        idx = lower_bound(node_sums[node].begin() + exclude_idx, node_sums[node].end(), node_sums[node][exclude_idx] + s) - node_sums[node].begin();
+      } else {
+        // left side
+        s = rand64() % node_sums[node][exclude_idx-1];
+        idx = lower_bound(node_sums[node].begin(), node_sums[node].begin() + exclude_idx, s) - node_sums[node].begin();
+      }
+      return G[node][idx];
+    };
+  
+    set<weighted_triangle> counter, history;
+    int nsamples = 0;
+    double init_time = include_setup? pre_st : st;
+  
+    auto terminate = [&]() {
+      if (max_samples != -1) {
+        return nsamples >= max_samples;
+      } else {
+        double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
+        return tot_time >= max_time;
+      }
+    };
+  
+    while (!(terminate())) {
+      auto edge = sample_edge();
+      int u = edge.src, v = edge.dst;
+      long long w = edge.wt;
+  
+      auto c0 = sample_neighbour(u, v);
+      auto c1 = sample_neighbour(v, u);
+      if (c0.dst == c1.dst) {
+        nsamples++;
+        auto tri = weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w);
+        if (history.count(tri) == 0) {
+          history.insert(tri);
+          counter.insert(tri);
+        }
+      }
+    }
+  
+    cerr << "Found " << counter.size() << " triangles in counter." << endl;
+    if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+    cerr << "Total Time (s): " << 1.0 * (clock() - pre_st) / CLOCKS_PER_SEC << endl;
+    return counter;
+  
+  }
+
+  set<weighted_triangle> wedge_sampler_everything(GraphStruct &GS, int max_samples=-1, double max_time=-1, double inc=-1, bool include_setup=true) {
+    cerr << "=============================================" << endl;
+    cerr << "Running wedge sampling for triangles" << endl;
+    cerr << "=============================================" << endl;
+
+    double pre_st = clock();
+
+    Graph &G = GS.G;
+
+    // build sampling distribution over vertices
+    vector<long long> cumulative_weights(G.size());
+    vector<vector<long long>> vertex_cumulative_weights_1(G.size());
+    vector<vector<long long>> vertex_cumulative_weights_2(G.size());
+    long long prev = 0;
+    // todo: replace this with p means
+    for (int i = 0; i < (int) G.size(); i++) {
+      long long vertex_weight = 0;
+      vertex_cumulative_weights_1[i].reserve(G[i].size());
+      vertex_cumulative_weights_2[i].reserve(G[i].size());
+      for (const auto &e : G[i]) {
+        vertex_weight += e.wt;
+        vertex_cumulative_weights_2[i].push_back(vertex_weight);
+      }
+
+      long long total_weight = 0;
+      for (const auto &e : G[i]) {
+        total_weight += G[i].size() * e.wt + vertex_weight;
+        vertex_cumulative_weights_1[i].push_back(total_weight);
+      }
+      // cumulative_weights.push_back(total_weight);
+      // cumulative_weights[cumulative_weights.size() - 1] += prev;
+      // prev = cumulative_weights.back();
+      cumulative_weights[i] = total_weight + prev;
+      prev = cumulative_weights[i];
+    }
+
+    // build an adjacency matrix where a(i, j) = weight of edge (i, j)
+    // TODO: maybe we should lift this out of the functions and make a more general graph structure
+    // vector<unordered_map<int, long long>> weight(G.size());
+    // vector<google::dense_hash_map<int, long long>> weight(G.size());
+    // for (int u = 0; u < (int) G.size(); u++) {
+    //   weight[u].set_empty_key(-1);
+    //   for (const auto &e : G[u]) {
+    //     int v = e.dst;
+    //     long long w = e.wt;
+    //     weight[u][v] = w;
+    //   }
+    // }
+    cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+
+    double st = clock();
+
+    auto sample_vertex = [&]() {
+      long long s = rand64() % cumulative_weights.back();
+      int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
+      return idx;
+    };
+
+    auto sample_neighbour_1 = [&](int v) {
+      long long s = rand64() % vertex_cumulative_weights_1[v].back();
+      int idx = lower_bound(vertex_cumulative_weights_1[v].begin(), vertex_cumulative_weights_1[v].end(), s) - vertex_cumulative_weights_1[v].begin();
+      return G[v][idx];
+    };
+
+    auto sample_neighbour_2 = [&](int v, long long shift) {
+      long long s = rand64() % (vertex_cumulative_weights_2[v].back() + shift * G[v].size());
+      if (s >= vertex_cumulative_weights_2[v].back()) {
+        return G[v][rand() % G[v].size()];
+      } else {
+        s = rand64() % vertex_cumulative_weights_2[v].back();
+        int idx = lower_bound(vertex_cumulative_weights_2[v].begin(), vertex_cumulative_weights_2[v].end(), s) - vertex_cumulative_weights_2[v].begin();
+        return G[v][idx];
+      }
+    };
+
+    set<weighted_triangle> counter, history;
+    int nsamples = 0;
+    double init_time = include_setup? pre_st : st;
+
+    auto terminate = [&]() {
+      if (max_samples != -1) {
+        return nsamples >= max_samples;
+      } else {
+        double tot_time = (clock() - init_time) / CLOCKS_PER_SEC;
+        return tot_time >= max_time;
+      }
+    };
+
+    while (!(terminate())) {
+      int u = sample_vertex();
+      auto ev = sample_neighbour_1(u);
+      auto ew = sample_neighbour_2(u, ev.wt);
+      if (ev.dst == ew.dst) continue;
+      nsamples++;
+
+      if (G[ev.dst].size() > G[ew.dst].size()) {
+        std::swap(ev, ew);
+      }
+
+      for (const auto &e : G[ev.dst]) {
+        if (e.dst == ew.dst) {
+          auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
+          if (history.count(tri) == 0) {
+            history.insert(tri);
+            counter.insert(tri);
+          }
+        }
+      }
+//          if (weight[ev.dst].count(ew.dst)) {
+// // todo: replace with p means
+// auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + weight[ev.dst][ew.dst]);
+// if (history.count(tri) == 0) {
+// history.insert(tri);
+// counter.insert(tri);
+// }
+// }
+    }
+
+
+    cerr << "Found " << counter.size() << " triangles in counter." << endl;
+    if (counter.size()) cerr << "The maximum weight triangle was " << *counter.begin() << endl;
+    cerr << "Total Time (s): " << 1.0 * (clock() - pre_st) / CLOCKS_PER_SEC << endl;
+    return counter;
+
+  }
+
+  vector<weighted_triangle> wedge_sampler_parallel_everything(GraphStruct &GS, int nthreads, int max_samples=-1, double max_time=-1, double inc=-1, bool include_setup=true) {
+    cerr << "=============================================" << endl;
+    cerr << "Running parallel wedge sampling for triangles (" << nthreads << " threads)" << endl;
+    cerr << "=============================================" << endl;
+    struct timespec pre_start, pre_finish;
+    double pre_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &pre_start);
+  
+    Graph &G = GS.G;
+  
+    // build sampling distribution over vertices
+    vector<long long> cumulative_weights(G.size());
+    vector<vector<long long>> vertex_cumulative_weights_1(G.size());
+    vector<vector<long long>> vertex_cumulative_weights_2(G.size());
+    long long prev = 0;
+    // todo: replace this with p means
+    omp_set_num_threads(thread::hardware_concurrency());
+    //omp_set_nested(1);
+  
+  #pragma omp parallel for
+    for (int i = 0; i < (int) G.size(); i++) {
+      long long vertex_weight = 0;
+      vertex_cumulative_weights_1[i].reserve(G[i].size());
+      vertex_cumulative_weights_2[i].reserve(G[i].size());
+      for (const auto &e : G[i]) {
+        vertex_weight += e.wt;
+        vertex_cumulative_weights_2[i].push_back(vertex_weight);
+      }
+  
+      long long total_weight = 0;
+      for (const auto &e : G[i]) {
+        total_weight += G[i].size() * e.wt + vertex_weight;
+        vertex_cumulative_weights_1[i].push_back(total_weight);
+      }
+    }
+  
+    for (int i = 0; i < (int) G.size(); i++) {
+      cumulative_weights[i] = vertex_cumulative_weights_2[i].back() + prev;
+      prev = cumulative_weights[i];
+    }
+  
+    // build an adjacency matrix where a(i, j) = weight of edge (i, j)
+    // TODO: maybe we should lift this out of the functions and make a more general graph structure
+    // vector<unordered_map<int, long long>> weight(G.size());
+    // vector<google::dense_hash_map<int, long long>> weight(G.size());
+    // for (int u = 0; u < (int) G.size(); u++) {
+    //   weight[u].set_empty_key(-1);
+    //   for (const auto &e : G[u]) {
+    //     int v = e.dst;
+    //     long long w = e.wt;
+    //     weight[u][v] = w;
+    //   }
+    // }
+  
+    vector<thread> threads(nthreads);
+    vector<vector<weighted_triangle>> counters(nthreads);
+    int nsamples_per_thread = ceil(max_samples / nthreads);
+  
+    clock_gettime(CLOCK_MONOTONIC, &pre_finish);
+    pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
+    pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
+  
+    cerr << "Pre-processing time: " << pre_elapsed << endl;
+  
+    struct timespec start, finish;
+    double tot_time;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+  
+    auto sample_vertex = [&]() {
+      long long s = rand64() % cumulative_weights.back();
+      int idx = lower_bound(cumulative_weights.begin(), cumulative_weights.end(), s) - cumulative_weights.begin();
+      return idx;
+    };
+  
+    auto sample_neighbour_1 = [&](int v) {
+      long long s = rand64() % vertex_cumulative_weights_1[v].back();
+      int idx = lower_bound(vertex_cumulative_weights_1[v].begin(), vertex_cumulative_weights_1[v].end(), s) - vertex_cumulative_weights_1[v].begin();
+      return G[v][idx];
+    };
+  
+    auto sample_neighbour_2 = [&](int v, long long shift) {
+      long long s = rand64() % (vertex_cumulative_weights_2[v].back() + shift * G[v].size());
+      if (s >= vertex_cumulative_weights_2[v].back()) {
+        return G[v][rand() % G[v].size()];
+      } else {
+        s = rand64() % vertex_cumulative_weights_2[v].back();
+        int idx = lower_bound(vertex_cumulative_weights_2[v].begin(), vertex_cumulative_weights_2[v].end(), s) - vertex_cumulative_weights_2[v].begin();
+        return G[v][idx];
+      }
+    };
+  
+    auto terminate = [&](int nsamples_) {
+      if (max_samples != -1) {
+        return nsamples_ >= nsamples_per_thread;
+      } else {
+        struct timespec cur;
+        double tot_time;
+        clock_gettime(CLOCK_MONOTONIC, &cur);
+        if (include_setup) {
+          tot_time = (cur.tv_sec - pre_start.tv_sec);
+          tot_time += (cur.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
+        } else {
+          tot_time = (cur.tv_sec - start.tv_sec);
+          tot_time += (cur.tv_nsec - start.tv_nsec) / 1000000000.0;
+        }
+        return tot_time >= max_time;
+      }
+    };
+  
+    auto parallel_sampler = [&](int i) {
+      int nsamples_ = 0;
+      while (!terminate(nsamples_)) {
+        int u = sample_vertex();
+        auto ev = sample_neighbour_1(u);
+        auto ew = sample_neighbour_2(u, ev.wt);
+        if (ev.dst == ew.dst) continue;
+        nsamples_++;
+  
+        if (G[ev.dst].size() > G[ew.dst].size()) {
+          std::swap(ev, ew);
+        }
+  
+        for (const auto &e : G[ev.dst]) {
+          if (e.dst == ew.dst) {
+            auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
+            counters[i].push_back(tri);
+            break;
+          }
+        }
+        //    if (weight[ev.dst].count(ew.dst)) {
+        // // todo: replace with p means
+        // auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + weight[ev.dst][ew.dst]);
+  
+        // bool cont = false;
+        // for (int j = 0; j < nthreads; j++) {
+        // if (histories[j].count(tri)) {
+        // cont = true;
+        // break;
+        // }
+        // }
+        // if (cont) continue;
+        // histories[i].insert(tri);
+        // counters[i].push_back(tri);
+        // }
+        //
+      }
+      sort(counters[i].begin(), counters[i].end());
+    };
+  
+    auto parallel_merger = [&](int i, int j) {
+      vector<weighted_triangle> W;
+      W.reserve(counters[i].size() + counters[j].size());
+      int a = 0, b = 0, Li = counters[i].size(), Lj = counters[j].size();
+      while (a < Li && b < Lj) {
+        if (counters[i][a] < counters[j][b]) {
+          if (counters[i][a] != W.back()) {
+            W.push_back(move(counters[i][a]));
+          }
+          a++;
+        } else if (counters[i][a] == counters[j][b]) {
+          if (counters[i][a] != W.back()) {
+            W.push_back(move(counters[i][a]));
+          }
+          a++;
+          b++;
+        } else {
+          if (counters[j][b] != W.back()) {
+            W.push_back(move(counters[j][b]));
+          }
+          b++;
+        }
+      }
+      while (a < Li) {
+        if (counters[i][a] != W.back()) {
+          W.push_back(move(counters[i][a]));
+        }
+        a++;
+      }
+      while (b < Lj) {
+        if (counters[j][b] != W.back()) {
+          W.push_back(move(counters[j][b]));
+        }
+        b++;
+      }
+      counters[i].swap(W);
+    };
+  
+    for (int i = 0; i < nthreads; i++) {
+      thread th(parallel_sampler, i);
+      threads[i] = move(th);
+    }
+    for (int i = 0; i < nthreads; i++) {
+      threads[i].join();
+    }
+  
+    struct timespec merge_start, merge_finish;
+    double merge_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &merge_start);
+  
+    // Parallel merging.
+  
+    int pow2_sz = 1, log2_sz = 0;
+    while (pow2_sz < nthreads) {
+      pow2_sz *= 2;
+      log2_sz++;
+    }
+  
+    for (int i = counters.size(); i < pow2_sz; i++) {
+      counters.push_back(vector<weighted_triangle>());
+    }
+  
+    vector<thread> merge_threads(pow2_sz);
+    int val = 1;
+    for (int level = 1; level < log2_sz+1; level++) {
+      val *= 2;
+      for (int i = 0; i < (int) counters.size()/val; i++) {
+        thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
+        merge_threads[i*val] = move(merge_th);
+      }
+      for (int i = 0; i < (int) counters.size()/val; i++) {
+        merge_threads[i*val].join();
+      }
+    }
+  
+    clock_gettime(CLOCK_MONOTONIC, &merge_finish);
+    merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
+    merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
+    cerr << "Merge time: " << merge_elapsed << endl;
+  
+    cerr << "Found " << counters[0].size() << " triangles." << endl;
+    if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
+  
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    tot_time = (finish.tv_sec - start.tv_sec);
+    tot_time += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+    cerr << "Total Time (s): " << tot_time << endl;
+    // cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+    cerr << endl;
+  
+    return counters[0];
   }
 
 */  
