@@ -74,10 +74,10 @@ int main(int argc, char* argv[]) {
   while (cur_time <= end_time) {
     times.push_back(cur_time);
     cerr << "Runnning for sampler for " << cur_time << " (s)" << endl;
-    if (sampler.find("edge") != string::npos) {
-      sampling_tri = (edge_parallel_time_version(GS, thread::hardware_concurrency(), cur_time, false));
-    } else if (sampler.find("wedge") != string::npos) {
+    if (sampler.find("wedge") != string::npos) {
       sampling_tri = (wedge_parallel_time_version(GS, thread::hardware_concurrency(), cur_time, false));
+    } else if (sampler.find("edge") != string::npos) {
+      sampling_tri = (edge_parallel_time_version(GS, thread::hardware_concurrency(), cur_time, false));
     } else if (sampler.find("path") != string::npos) {
       sampling_tri = (path_parallel_time_version(GS, thread::hardware_concurrency(), cur_time, false));
     } else {

@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 
   double cur_time = increment;
   vector<double> times;
-  set<weighted_triangle> edge_sampling_tri, wedge_sampling_tri, path_sampling_tri;
+  vector<weighted_triangle> edge_sampling_tri, wedge_sampling_tri, path_sampling_tri;
   auto all_tris = dynamic_heavy_light(GS, K);
   while (cur_time <= end_time) {
     times.push_back(cur_time);
