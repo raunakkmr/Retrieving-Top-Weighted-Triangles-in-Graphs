@@ -229,6 +229,7 @@ namespace wsdm_2019_graph {
     Graph &G = GS.G;
     const vector<full_edge>& edges = GS.edges;
 
+    set<weighted_triangle> counter;
     vector<thread> threads(nthreads);
     vector<vector<weighted_triangle>> counters(nthreads);
     vector<set<pair<int, int>>> histories(nthreads);
@@ -442,11 +443,17 @@ namespace wsdm_2019_graph {
           for (const auto &ev : G[v]) {
             if (vert_to_wt.count(ev.dst)) {
               auto tri = weighted_triangle(u, v, ev.dst, ev.wt + vert_to_wt[ev.dst] + w);
-              counters[s_idx].push_back(tri);
+              if (nthreads > 1) {
+                counters[s_idx].push_back(tri);
+              } else {
+                counter.insert(tri);
+              }
             }
           }
         }
-        sort(counters[s_idx].begin(), counters[s_idx].end());
+        if (nthreads > 1) {
+          sort(counters[s_idx].begin(), counters[s_idx].end());
+        }
 
     };
 
@@ -493,7 +500,11 @@ namespace wsdm_2019_graph {
         for (const auto &e : G[ev.dst]) {
           if (e.dst == ew.dst) {
             auto tri = weighted_triangle(u, ev.dst, ew.dst, ev.wt + ew.wt + e.wt);
-            counters[s_idx].push_back(tri);
+            if (nthreads > 1) {
+              counters[s_idx].push_back(tri);
+            } else {
+              counter.insert(tri);
+            }
             break;
           }
         }
@@ -515,7 +526,9 @@ namespace wsdm_2019_graph {
         }
         */
       }
-      sort(counters[s_idx].begin(), counters[s_idx].end());
+      if (nthreads > 1) {
+        sort(counters[s_idx].begin(), counters[s_idx].end());
+      }
     };
 
     // Sample a 3-path and check if it induces a triangle.
@@ -562,14 +575,20 @@ namespace wsdm_2019_graph {
         if (c0.dst == c1.dst) {
           nsamples_++;
           auto tri = weighted_triangle(u, v, c0.dst, c0.wt + c1.wt + w);
-          counters[s_idx].push_back(tri);
+          if (nthreads > 1) {
+            counters[s_idx].push_back(tri);
+          } else {
+            counter.insert(tri);
+          }
           // if (history.count(tri) == 0) {
           //   history.insert(tri);
           //   counter.insert(tri);
           // }
         }
       }
-      sort(counters[s_idx].begin(), counters[s_idx].end());
+      if (nthreads > 1) {
+        sort(counters[s_idx].begin(), counters[s_idx].end());
+      }
     };
 
     // Merge two sorted vectors of triangles and remove duplicates.
@@ -674,15 +693,21 @@ namespace wsdm_2019_graph {
       // sampler(0);
     }
 
-    cerr << "Found " << counters[0].size() << " triangles." << endl;
-    if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
-
     clock_gettime(CLOCK_MONOTONIC, &finish);
     tot_time = (finish.tv_sec - start.tv_sec);
     tot_time += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
     cerr << "Total Time (s): " << tot_time << endl;
     // cerr << "Time per sample (s): " << tot_time / nsamples << endl;
     cerr << endl;
+
+    if (nthreads == 1) {
+      for (const auto &t : counter) {
+        counters[0].push_back(t);
+      }
+    }
+
+    cerr << "Found " << counters[0].size() << " triangles." << endl;
+    if (counters[0].size()) cerr << "The maximum weight triangle was " << *counters[0].begin() << endl;
 
     return counters[0];
 
