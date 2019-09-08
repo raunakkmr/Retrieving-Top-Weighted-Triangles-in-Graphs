@@ -68,9 +68,9 @@ int main(int argc, char* argv[]) {
   auto all_tris = dynamic_heavy_light(GS, K);
   while (cur_time <= end_time) {
     times.push_back(cur_time);
-    edge_sampling_tri = (edge_time_version(GS, cur_time, -1, false));
-    wedge_sampling_tri = (wedge_time_version(GS, cur_time, -1, false));
-    path_sampling_tri = (path_time_version(GS, cur_time, -1, false));
+    edge_sampling_tri = (edge_time_version(GS, cur_time, false));
+    wedge_sampling_tri = (wedge_time_version(GS, cur_time, false));
+    path_sampling_tri = (path_time_version(GS, cur_time, false));
     cerr << "*** Comparing edge sampling ***" << endl;
     compare_statistics(all_tris, edge_sampling_tri, K, true);
     cerr << "*** Comparing wedge sampling ***" << endl;
