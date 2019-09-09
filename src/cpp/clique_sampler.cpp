@@ -13,15 +13,21 @@ using namespace wsdm_2019_graph;
 
 DEFINE_string(filename, "", "Path to graph file.");
 DEFINE_bool(binary, true, "Flag for if graph is in our binary format.");
+DEFINE_string(format, "", "If binary is false this indicates format of graph file. One of weighted, temporal, simplicial. Required if binary is false.");
 DEFINE_int32(clique_size, 4, "The size of the clique.");
-DEFINE_int32(nsamples, 0, "Number of samples for clique edge sampler.");
+DEFINE_double(start_time, 0, "How long to run the algorithm for (in seconds).");
+DEFINE_double(end_time, 0, "When to terminate (in seconds).");
+DEFINE_double(increment, 0, "Time increments (in seconds).");
 DEFINE_bool(print_statistics, false, "Prints extra debug statistics about the graph.");
 
 int main(int argc, char* argv[]) {
   std::string usage("Edge based clique sampler.\n"
       "Sample usage:\n"
       "\t./clique_sampler -filename=[fill_this_in] "
-      "-binary=true -clique_size=4 -nsamples=100 \n"
+      "-binary=true -clique_size=[fill_this_in] "
+      "-start_time=[fill_this_in] -end_time=[fill_this_in] -increment=[fill_this_in]\n"
+      "For example, if start_time, end_time, increment are 2, 6 and 2 respectively "
+      "then the chosen algorithm is run 3 times - for 2, 4, and 6 seconds.\n"
       "Additionally, these flags can be loaded from a single file "
       "with the option -flagfile=[filename].");
 
@@ -37,15 +43,22 @@ int main(int argc, char* argv[]) {
   cin.tie(0);
   srand(0); 
 
-  auto GS = read_graph(FLAGS_filename, true);
+  auto GS = read_graph(FLAGS_filename, FLAGS_binary, FLAGS_format);
   int CLIQUE_SIZE = FLAGS_clique_size;
-  int NUM_SAMPLES_CLIQUE = FLAGS_nsamples;
+  double start_time = FLAGS_start_time;
+  double end_time = FLAGS_end_time;
+  double increment = FLAGS_increment;
 
   cerr << "=============================================" << endl;
   cerr << "ARGUMENTS" << endl;
   cerr << "=============================================" << endl;
   cerr << "Dataset: " << FLAGS_filename << endl;
-  cerr << "CLIQUE_SIZE, NSAMPS: " << CLIQUE_SIZE << " " << NUM_SAMPLES_CLIQUE << endl;
+  cerr << "Binary: " << FLAGS_binary << endl;
+  cerr << "Format: " << FLAGS_format << endl;
+  cerr << "CLIQUE_SIZE: " << CLIQUE_SIZE << endl;
+  cerr << "Start time: " << start_time << endl;
+  cerr << "End time: " << end_time << endl;
+  cerr << "Increment: " << increment << endl;
 
   if (FLAGS_print_statistics) {
     cerr << "=============================================" << endl;
@@ -70,16 +83,21 @@ int main(int argc, char* argv[]) {
 
   int nthreads = thread::hardware_concurrency();
 
-  // auto edge_sampling_tri = edge_samples_version(GS, NUM_SAMPLES_EDGE);
-  // auto edge_sampling_tri_parallel = edge_parallel_samples_version(GS, nthreads, NUM_SAMPLES_EDGE);
-  // auto wedge_sampling_tri = wedge_sampler(GS, NUM_SAMPLES_WEDGE);
-  // auto path_sampling_tri = path_sampler(GS, NUM_SAMPLES_PATH);
-  // auto heavy_light_sampling_tri = heavy_light_sampler(GS, 0.05);
-
   if (CLIQUE_SIZE > 1) {
-    // auto sampled_cliques = clique_sampler(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE);
-    auto sampled_cliques_parallel = clique_sampler_parallel(GS, CLIQUE_SIZE, NUM_SAMPLES_CLIQUE, nthreads);
     auto all_cliques = clique_brute_force(GS.G, CLIQUE_SIZE);
+    double cur_time = start_time;
+    vector<double> times;
+    vector<weighted_clique> sampling_cliques;
+    while (cur_time <= end_time) {
+      times.push_back(cur_time);
+      cerr << "Runnning for sampler for " << cur_time << " (s)" << endl;
+      sampling_cliques = clique_sampler_tmp(GS, CLIQUE_SIZE, nthreads, -1, cur_time, false);
+      cerr << "*** Comparing parallel sampling ***" << endl;
+      cerr << "*** Not implemented yet for cliques ***" << endl;
+      // compare_statistics(all_tris, sampling_tri, K, true);
+      cur_time += increment;
+    }
   }
+
   return 0;
 }
