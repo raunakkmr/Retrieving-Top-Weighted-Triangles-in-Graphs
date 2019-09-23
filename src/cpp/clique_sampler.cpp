@@ -1,6 +1,5 @@
 #include <bits/stdc++.h>
 
-#include "turan.h"
 #include "graph.h"
 #include "clique_sampler.h"
 #include "triangle_sampler.h"
@@ -15,8 +14,8 @@ DEFINE_string(filename, "", "Path to graph file.");
 DEFINE_bool(binary, true, "Flag for if graph is in our binary format.");
 DEFINE_string(format, "", "If binary is false this indicates format of graph file. One of weighted, temporal, simplicial. Required if binary is false.");
 DEFINE_int32(clique_size, 4, "The size of the clique.");
-DEFINE_double(start_time, 0, "How long to run the algorithm for (in seconds).");
-DEFINE_double(end_time, 0, "When to terminate (in seconds).");
+DEFINE_double(start_time, 1, "How long to run the algorithm for (in seconds).");
+DEFINE_double(end_time, 1, "When to terminate (in seconds).");
 DEFINE_double(increment, 0, "Time increments (in seconds).");
 DEFINE_bool(print_statistics, false, "Prints extra debug statistics about the graph.");
 
@@ -91,10 +90,9 @@ int main(int argc, char* argv[]) {
     while (cur_time <= end_time) {
       times.push_back(cur_time);
       cerr << "Runnning for sampler for " << cur_time << " (s)" << endl;
-      sampling_cliques = clique_sampler_tmp(GS, CLIQUE_SIZE, nthreads, -1, cur_time, false);
+      sampling_cliques = clique_sampler_parallel(GS, CLIQUE_SIZE, 1000, nthreads);
       cerr << "*** Comparing parallel sampling ***" << endl;
-      cerr << "*** Not implemented yet for cliques ***" << endl;
-      // compare_statistics(all_tris, sampling_tri, K, true);
+      compare_statistics(all_cliques, sampling_cliques, CLIQUE_SIZE);
       cur_time += increment;
     }
   }

@@ -1790,13 +1790,15 @@ namespace wsdm_2019_graph {
 
   }
 
-  bool custom_find(const vector<weighted_triangle> &v,
-      const weighted_triangle &T) {
+  template<class U>
+  bool custom_find(const vector<U> &v,
+      const U &T) {
     return binary_search(v.begin(), v.end(), T);
   }
 
-  bool custom_find(const set<weighted_triangle> &s,
-      const weighted_triangle &T) {
+  template<class U>
+  bool custom_find(const set<U> &s,
+      const U &T) {
     return s.count(T);
   }
 

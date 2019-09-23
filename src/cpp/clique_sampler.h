@@ -460,8 +460,555 @@ namespace wsdm_2019_graph {
 
   }
 
-}
+  // Computes the accuracy.
+  // Arguments:
+  //   all_cliques: True top-k cliques (or all cliques).
+  //   sampled_cliques: Top-k cliques (or all cliques) recovered by the
+  //   heavy-light or random sampling algorithms. U must be (sorted) vector or
+  //   set of weighted clique.
+  //   K: Parameter k for top-k.
+  //   check_k: If true then only top-k cliques are required in all_cliques
+  //   and in sampled_cliques, and this function only computes the accuracy.
+  //   Else, it requires all enumerated cliques in all_cliques and in
+  //   sampled_cliques and in addition to accuracy, it also prints what
+  //   percentage of top x% of cliques were recovered for various values of x.
+  template<class U>
+    void compare_statistics(set<weighted_clique> &all_cliques, U &sampled_cliques, int K, bool check_k=false) {
+      cerr << "=============================================" << endl;
+      cerr << "Comparing statistics" << endl;
+      cerr << "=============================================" << endl;
 
+      int num_found = 0;
+      int curr_tri = 0;
+      bool first_break = 0;
+      int bidx = 0;
+      vector<double> breakpoints({0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0 - 1e-6});
+
+      int k = min(K, (int)sampled_cliques.size());
+      vector<long long> ranks(k);
+      // vector<long long> top_sampled_weights(k), top_true_weights(k);
+      // vector<long double> percentiles(k);
+
+      set<long long> unique_weights;
+      for (const auto &T : all_cliques) {
+        unique_weights.insert(T.weight);
+      }
+      vector<long long> weights(unique_weights.begin(), unique_weights.end());
+
+      omp_set_num_threads(thread::hardware_concurrency());
+      omp_set_nested(1);
+      __gnu_parallel::sort(weights.rbegin(), weights.rend());
+
+      if (check_k) {
+        for (const auto &T : sampled_cliques) {
+          num_found++;
+          if (num_found < k+1) {
+            ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
+          } else {
+            break;
+          }
+        }
+      } else {
+        for (const auto &T : all_cliques) {
+          if (custom_find(sampled_cliques, T)) {
+            num_found++;
+            if (num_found < k+1) {
+              ranks[num_found-1] = lower_bound(weights.begin(), weights.end(), T.weight, greater<long long>()) - weights.begin() + 1;
+              /*
+                 percentiles[num_found-1] = 1.0 - (long double) (curr_tri+1.0)/all_cliques.size();
+                 top_sampled_weights[num_found-1] = T.weight;
+               */
+            }
+          }
+          curr_tri++;
+          /*
+             if (curr_tri < k+1) {
+             top_true_weights[curr_tri-1] = T.weight;
+             }
+           */
+
+          // What percentage of top cliques were found?
+          if (num_found != curr_tri && !first_break) {
+            first_break = true;
+            cerr << "Found top " << 100.0 * num_found / all_cliques.size() << " (" << num_found << ") percent of weighted cliques." << endl;
+          }
+          if (bidx < (int) breakpoints.size() && curr_tri == int(breakpoints[bidx] * all_cliques.size())) {
+            cerr << "Found " << 100.0 * num_found / curr_tri << " percent of weighted cliques top " << int(breakpoints[bidx] * 100 + 1e-3) <<"%." << endl;
+            bidx++;
+          }
+        }
+      }
+      /*
+         cerr << "=============================================" << endl;
+         cerr << "Ranks of top " << k << " cliques" << endl;
+         cerr << "=============================================" << endl;
+         for (auto rank : ranks) {
+         cerr << rank << " ";
+         }
+         cerr << endl;
+       */
+
+      /*
+         cerr << "=============================================" << endl;
+         cerr << "Percentiles of top " << k << " cliques" << endl;
+         cerr << "=============================================" << endl;
+         for (auto percentile: percentiles) {
+         cerr << percentile << " ";
+         }
+         cerr << endl;
+       */
+
+      // Compute the accuracy.
+      long double acc = 0.0;
+      vector<long long> all_weights;
+      for (const auto &T : all_cliques) {
+        all_weights.push_back(T.weight);
+        if ((int) all_weights.size() == k) break;
+      }
+      set<long long> weights_set(all_weights.begin(), all_weights.end());
+      map<long long, long long> cnt_all, cnt_sampled;
+      vector<long long> top_weights(all_weights.begin(), all_weights.begin()+k);
+      for (const auto &w : all_weights) cnt_all[w]++;
+      for (const auto &T : sampled_cliques) cnt_sampled[T.weight]++;
+      for (const auto &w : weights_set) acc += min(cnt_all[w], cnt_sampled[w]);
+      acc /= k;
+      cerr << "=============================================" << endl;
+      cerr << "Accuracy: " << acc << endl;
+      cerr << "=============================================" << endl;
+
+      // for (const auto &w : top_weights) cerr << w << " "; cerr << endl;
+      // for (const auto &T : sampled_cliques) cerr << T.weight << " "; cerr << endl;
+
+      cerr << endl;
+    }
+
+    set<weighted_clique> clique_sampler(GraphStruct& GS, int k, int nsamples) {
+    cerr << "=============================================" << endl;
+    cerr << "Running edge sampling for k-cliques" << endl;
+    cerr << "=============================================" << endl;
+    double pre_st = clock();
+
+    Graph &G = GS.G;
+    const vector<full_edge>& edges = GS.edges;
+    long long total_edge_weight = 0;
+    vector<int> weight_index;
+    int cur = 0;
+    while (cur < (int) edges.size()) {
+      weight_index.push_back(cur);
+      long long cur_wt = edges[cur].wt;
+      int nsteps = 5, found = 0;
+      while (cur < (int) edges.size() && nsteps--) {
+        cur++;
+        if (edges[cur].wt < cur_wt) {
+          found = 1;
+          break;
+        }
+      }
+
+      if (!found) {
+        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
+      }
+      total_edge_weight += (cur - weight_index.back()) * cur_wt;
+    }
+    weight_index.push_back(cur);
+
+    // Prune the graph first
+    vector<int> degree;
+    vector<bool> removed;
+    prune_edges(G, degree, removed, k-1);
+
+    cerr << "Precompute time (s): " << 1.0 * (clock() - pre_st)/CLOCKS_PER_SEC << endl;
+    cerr << "Edge weight classes: " << int(weight_index.size())-1 << endl;
+    cerr << "Total edge weight: " << total_edge_weight << endl;
+
+    double st = clock();
+
+    auto batched_sample_edges = [&](int num_samples){
+      vector<int> sample_index(num_samples);
+      vector<long long> sample_numbers(num_samples);
+      for (int i = 0; i < num_samples; i++) {
+        long long s = rand64() % total_edge_weight;
+        sample_numbers[i] = s;
+      }
+
+      long long cur_weight = 0;
+      int j = 0;
+      for (int i = 0; i < int(weight_index.size()) - 1; i++) {
+        cur_weight += (weight_index[i+1] - weight_index[i]) * edges[weight_index[i]].wt;
+        while (j < num_samples && sample_numbers[j] <= cur_weight) {
+          int e = rand() % (weight_index[i+1] - weight_index[i]);
+          sample_index[j] = e + weight_index[i];
+          j++;
+        }
+        if (j == num_samples) break;
+      }
+      return sample_index;
+    };
+
+    set<weighted_clique> counter;
+    set<pair<int, int>> history;
+    auto sample_index = batched_sample_edges(nsamples);
+    for (int samp = 0; samp < nsamples; samp++) {
+      auto sample = edges[sample_index[samp]];
+      int u = sample.src, v = sample.dst;
+      if (removed[u] || removed[v]) continue;
+
+      long long w = sample.wt;
+      if (history.count(make_pair(u, v))) {
+        continue;
+      }
+      history.insert(make_pair(u, v));
+      map<int, long long> vert_to_wt_u, vert_to_wt_v;
+      for (auto e : G[u]) {
+        if (removed[e.dst]) continue;
+        vert_to_wt_u[e.dst] = e.wt;
+      }
+
+      vector<int> common_nbrs;
+      for (auto e : G[v]) {
+        if (removed[e.dst]) continue;
+        vert_to_wt_v[e.dst] = e.wt;
+        if (vert_to_wt_u.count(e.dst)) {
+          // todo: replace with p means
+          if ((int) G[e.dst].size() >= k-1) {
+            common_nbrs.push_back(e.dst);
+          }
+        }
+      }
+
+      if ((int) common_nbrs.size() < k-2) continue;
+      int nedges = 0;
+
+      Graph subgraph(common_nbrs.size());
+      map<int, int> label, unlabel;
+      int cidx = 0;
+      for (int u_ : common_nbrs) {
+        label[u_] = cidx;
+        unlabel[cidx] = u_;
+        cidx++;
+      }
+
+      set<int> cn_set(common_nbrs.begin(), common_nbrs.end());
+      for (int u_ : common_nbrs) {
+        for (const auto& e : G[u_]) {
+          if (e.dst > u_ && cn_set.count(e.dst)) {
+            int v_ = e.dst, w_ = e.wt;
+            subgraph[label[u_]].push_back({label[v_], w_});
+            subgraph[label[v_]].push_back({label[u_], w_});
+            nedges++;
+          }
+        }
+      }
+
+      if (nedges < (k-2) * (k-3) / 2) continue;
+      vector<weighted_clique> cliques;
+      if (k < 5) {
+        cliques = enumerate_cliques(subgraph, k-2);
+      } else {
+        cliques = find_cliques(subgraph, k-2);
+      }
+
+      for (auto& clique : cliques) {
+        // unlabelling phase
+        set<int> seen;
+        for (int& vert : clique.vertices) {
+          vert = unlabel[vert];
+          seen.insert(vert);
+        }
+        clique.vertices.push_back(u);
+        clique.vertices.push_back(v);
+
+        for (const auto& e : G[u]) {
+          if (seen.count(e.dst)) {
+            clique.weight += e.wt;
+          }
+        }
+        for (const auto& e : G[v]) {
+          if (seen.count(e.dst)) {
+            clique.weight += e.wt;
+          }
+        }
+        clique.weight += w;
+        sort(clique.vertices.begin(), clique.vertices.end());
+        counter.insert(move(clique));
+      }
+    }
+    cerr << "Found " << counter.size() << " " << k << "-cliques." << endl;
+    if (counter.size()) cerr << "The maximum weight " << k << "-clique was " << *counter.begin() << endl;
+
+    double tot_time = (clock() - st) / CLOCKS_PER_SEC;
+    cerr << "Total Time (s): " << tot_time << endl;
+    cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+
+    return counter;
+  }
+
+  vector<weighted_clique> clique_sampler_parallel(GraphStruct& GS, int k, int nsamples, int nthreads) {
+    cerr << "=============================================" << endl;
+    cerr << "Running parallel clique sampling (k=" << k << ", " << nthreads << " threads)" << endl;
+    cerr << "=============================================" << endl;
+
+    struct timespec pre_start, pre_finish;
+    double pre_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &pre_start);
+
+    Graph &G = GS.G;
+    const vector<full_edge>& edges = GS.edges;
+    long long total_edge_weight = 0;
+    vector<int> weight_index;
+    int cur = 0;
+    while (cur < (int) edges.size()) {
+      weight_index.push_back(cur);
+      long long cur_wt = edges[cur].wt;
+      int nsteps = 5, found = 0;
+      while (cur < (int) edges.size() && nsteps--) {
+        cur++;
+        if (edges[cur].wt < cur_wt) {
+          found = 1;
+          break;
+        }
+      }
+
+      if (!found) {
+        cur = lower_bound(edges.begin() + cur, edges.end(), full_edge(0, 0, cur_wt), greater<full_edge>()) - edges.begin();
+      }
+      total_edge_weight += (cur - weight_index.back()) * cur_wt;
+    }
+    weight_index.push_back(cur);
+
+    // Prune the graph first
+    vector<int> degree;
+    vector<bool> removed;
+    prune_edges(G, degree, removed, k-1);
+
+    clock_gettime(CLOCK_MONOTONIC, &pre_finish);
+
+    pre_elapsed = (pre_finish.tv_sec - pre_start.tv_sec);
+    pre_elapsed += (pre_finish.tv_nsec - pre_start.tv_nsec) / 1000000000.0;
+    cerr << "Pre-processing time: " << pre_elapsed << endl;
+    cerr << "Edge weight classes: " << int(weight_index.size())-1 << endl;
+    cerr << "Total edge weight: " << total_edge_weight << endl;
+
+    struct timespec start, finish;
+    double tot_time;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    vector<thread> threads(nthreads);
+    vector<vector<weighted_clique>> counters(nthreads);
+    vector<set<pair<int, int>>> histories(nthreads);
+    int nsamples_per_thread = ceil(nsamples / nthreads);
+
+    auto batched_sample_edges = [&](int num_samples){
+      vector<int> sample_index(num_samples);
+      vector<long long> sample_numbers(num_samples);
+      for (int i = 0; i < num_samples; i++) {
+        long long s = rand64() % total_edge_weight;
+        sample_numbers[i] = s;
+      }
+
+      long long cur_weight = 0;
+      int j = 0;
+      for (int i = 0; i < int(weight_index.size()) - 1; i++) {
+        cur_weight += (weight_index[i+1] - weight_index[i]) * edges[weight_index[i]].wt;
+        while (j < num_samples && sample_numbers[j] <= cur_weight) {
+          int e = rand() % (weight_index[i+1] - weight_index[i]);
+          sample_index[j] = e + weight_index[i];
+          j++;
+        }
+        if (j == num_samples) break;
+      }
+      return sample_index;
+    };
+
+    auto parallel_sampler = [&](int i) {
+      auto sample_index = batched_sample_edges(nsamples);
+      for (int samp = 0; samp < nsamples_per_thread; samp++) {
+        auto sample = edges[sample_index[samp]];
+        int u = sample.src, v = sample.dst;
+        if (removed[u] || removed[v]) continue;
+
+        long long w = sample.wt;
+        bool cont = false;
+        for (int j = 0; j < nthreads; j++) {
+          if (histories[j].count(make_pair(u, v))) {
+            cont = true;
+            break;
+          }
+        }
+        if (cont) continue;
+        histories[i].insert(make_pair(u, v));
+        map<int, long long> vert_to_wt_u, vert_to_wt_v;
+        for (auto e : G[u]) {
+          if (removed[e.dst]) continue;
+          vert_to_wt_u[e.dst] = e.wt;
+        }
+
+        vector<int> common_nbrs;
+        for (auto e : G[v]) {
+          if (removed[e.dst]) continue;
+          vert_to_wt_v[e.dst] = e.wt;
+          if (vert_to_wt_u.count(e.dst)) {
+            // todo: replace with p means
+            if ((int) G[e.dst].size() >= k-1) {
+              common_nbrs.push_back(e.dst);
+            }
+          }
+        }
+
+        if ((int) common_nbrs.size() < k-2) continue;
+        int nedges = 0;
+
+        Graph subgraph(common_nbrs.size());
+        map<int, int> label, unlabel;
+        int cidx = 0;
+        for (int u_ : common_nbrs) {
+          label[u_] = cidx;
+          unlabel[cidx] = u_;
+          cidx++;
+        }
+
+        set<int> cn_set(common_nbrs.begin(), common_nbrs.end());
+        for (int u_ : common_nbrs) {
+          for (const auto& e : G[u_]) {
+            if (e.dst > u_ && cn_set.count(e.dst)) {
+              int v_ = e.dst, w_ = e.wt;
+              subgraph[label[u_]].push_back({label[v_], w_});
+              subgraph[label[v_]].push_back({label[u_], w_});
+              nedges++;
+            }
+          }
+        }
+
+        if (nedges < (k-2) * (k-3) / 2) continue;
+        vector<weighted_clique> cliques;
+        if (k < 5) {
+          cliques = enumerate_cliques(subgraph, k-2);
+        } else {
+          cliques = find_cliques(subgraph, k-2);
+        }
+
+        for (auto& clique : cliques) {
+          // unlabelling phase
+          set<int> seen;
+          for (int& vert : clique.vertices) {
+            vert = unlabel[vert];
+            seen.insert(vert);
+          }
+          clique.vertices.push_back(u);
+          clique.vertices.push_back(v);
+
+          for (const auto& e : G[u]) {
+            if (seen.count(e.dst)) {
+              clique.weight += e.wt;
+            }
+          }
+          for (const auto& e : G[v]) {
+            if (seen.count(e.dst)) {
+              clique.weight += e.wt;
+            }
+          }
+          clique.weight += w;
+          sort(clique.vertices.begin(), clique.vertices.end());
+          counters[i].push_back(move(clique));
+        }
+      }
+      sort(counters[i].begin(), counters[i].end());
+    };
+
+    auto parallel_merger = [&](int i, int j) {
+      vector<weighted_clique> W;
+      W.reserve(counters[i].size() + counters[j].size());
+      int a = 0, b = 0, Li = counters[i].size(), Lj = counters[j].size();
+      while (a < Li && b < Lj) {
+        if (counters[i][a] < counters[j][b]) {
+          if (counters[i][a] != W.back()) {
+            W.push_back(move(counters[i][a]));
+          }
+          a++;
+        } else if (counters[i][a] == counters[j][b]) {
+          if (counters[i][a] != W.back()) {
+            W.push_back(move(counters[i][a]));
+          }
+          a++;
+          b++;
+        } else {
+          if (counters[j][b] != W.back()) {
+            W.push_back(move(counters[j][b]));
+          }
+          b++;
+        }
+      }
+      while (a < Li) {
+        if (counters[i][a] != W.back()) {
+          W.push_back(move(counters[i][a]));
+        }
+        a++;
+      }
+      while (b < Lj) {
+        if (counters[j][b] != W.back()) {
+          W.push_back(move(counters[j][b]));
+        }
+        b++;
+      }
+      counters[i].swap(W);
+    };
+
+    for (int i = 0; i < nthreads; i++) {
+      thread th(parallel_sampler, i);
+      threads[i] = move(th);
+    }
+    for (int i = 0; i < nthreads; i++) {
+      threads[i].join();
+    }
+
+    struct timespec merge_start, merge_finish;
+    double merge_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &merge_start);
+
+    // Parallel merging.
+
+    int pow2_sz = 1, log2_sz = 0;
+    while (pow2_sz < nthreads) {
+      pow2_sz *= 2;
+      log2_sz++;
+    }
+
+    for (int i = counters.size(); i < pow2_sz; i++) {
+      counters.push_back(vector<weighted_clique>());
+    }
+
+    vector<thread> merge_threads(pow2_sz);
+    int val = 1;
+    for (int level = 1; level < log2_sz+1; level++) {
+      val *= 2;
+      for (int i = 0; i < (int) counters.size()/val; i++) {
+        thread merge_th(parallel_merger, i*val, i*val+(int)val/2);
+        merge_threads[i*val] = move(merge_th);
+      }
+      for (int i = 0; i < (int) counters.size()/val; i++) {
+        merge_threads[i*val].join();
+      }
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &merge_finish);
+    merge_elapsed = (merge_finish.tv_sec - merge_start.tv_sec);
+    merge_elapsed += (merge_finish.tv_nsec - merge_start.tv_nsec) / 1000000000.0;
+    cerr << "Merge time: " << merge_elapsed << endl;
+
+    cerr << "Found " << counters[0].size() << " cliques." << endl;
+    if (counters[0].size()) cerr << "The maximum weight clique was " << *counters[0].begin() << endl;
+
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    tot_time = (finish.tv_sec - start.tv_sec);
+    tot_time += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+    cerr << "Total Time (s): " << tot_time << endl;
+    cerr << "Time per sample (s): " << tot_time / nsamples << endl;
+    cerr << endl;
+
+    return counters[0];
+  }
+
+}
 #endif /* CLIQUE_SAMPLER_H */
 
 /*

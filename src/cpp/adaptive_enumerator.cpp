@@ -5,7 +5,6 @@
 
 #include "gflags/gflags.h"
 
-#include "turan.h"
 #include "graph.h"
 #include "clique_sampler.h"
 #include "triangle_sampler.h"

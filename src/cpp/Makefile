@@ -4,11 +4,12 @@ obj = $(src:.cpp=.o)
 exe = $(src:.cpp=)
 
 LDFLAGS = -fopenmp -fPIC
+GFLAGS_CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall -fPIC
 CXXFLAGS = -fopenmp -Ofast -march=native -std=c++11 -Wall -fPIC -I./ #-D_GLIBCXX_PARALLEL
 OBJ_GFLAGS = $(addprefix gflags/, gflags.o gflags_nc.o gflags_completions.o gflags_reporting.o)
 
 gflags/%.o: include/gflags/%.cc
-	$(CXX) -c $(DEBUG) $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(DEBUG) $(GFLAGS_CXXFLAGS) $< -o $@
 
 adaptive_enumerator: $(OBJ_GFLAGS) $(headers) adaptive_enumerator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
