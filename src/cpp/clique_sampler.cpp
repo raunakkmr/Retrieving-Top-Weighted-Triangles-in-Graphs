@@ -17,6 +17,8 @@ DEFINE_int32(clique_size, 4, "The size of the clique.");
 DEFINE_double(start_time, 1, "How long to run the algorithm for (in seconds).");
 DEFINE_double(end_time, 1, "When to terminate (in seconds).");
 DEFINE_double(increment, 0, "Time increments (in seconds).");
+DEFINE_int32(k, 1000, "Parameter k for top-k.");
+DEFINE_int32(runs, 10, "Number of runs.");
 DEFINE_bool(print_statistics, false, "Prints extra debug statistics about the graph.");
 
 int main(int argc, char* argv[]) {
@@ -84,16 +86,20 @@ int main(int argc, char* argv[]) {
 
   if (CLIQUE_SIZE > 1) {
     auto all_cliques = clique_brute_force(GS.G, CLIQUE_SIZE);
-    double cur_time = start_time;
-    vector<double> times;
-    vector<weighted_clique> sampling_cliques;
-    while (cur_time <= end_time) {
-      times.push_back(cur_time);
-      cerr << "Runnning for sampler for " << cur_time << " (s)" << endl;
-      sampling_cliques = clique_sampler_parallel(GS, CLIQUE_SIZE, 1000, nthreads);
-      cerr << "*** Comparing parallel sampling ***" << endl;
-      compare_statistics(all_cliques, sampling_cliques, CLIQUE_SIZE);
-      cur_time += increment;
+    for (int run = 0; run < FLAGS_runs; run++) {
+      cerr << "Run: " << run << endl;
+      double cur_time = start_time;
+      vector<double> times;
+      vector<weighted_clique> sampling_cliques;
+      while (cur_time <= end_time) {
+        times.push_back(cur_time);
+        cerr << "Runnning for sampler for " << cur_time << " (s)" << endl;
+        // sampling_cliques = clique_sampler_parallel(GS, CLIQUE_SIZE, 1000, nthreads);
+        sampling_cliques = clique_sampler_tmp(GS, CLIQUE_SIZE, nthreads, 1000);
+        cerr << "*** Comparing parallel sampling ***" << endl;
+        compare_statistics(all_cliques, sampling_cliques, CLIQUE_SIZE);
+        cur_time += increment;
+      }
     }
   }
 
