@@ -56,10 +56,17 @@ conversion, proposed algorithms, and comparisons.
 
 ## Reproduce results
 
-In order to reproduce the results run the following scripts in the `scripts` directory:
+In order to reproduce the results run the following scripts in the `scripts` directory (you may have to edit the scripts to specify the correct path to the datasets.):
 * `convert_data.sh`: Converts the data as described above.
 * `compare_deterministic.sh`: Runs the static heavy-light, dynamic heavy-light and auto heavy-light algorithms.
 * `compare_parallel_edge.sh`: Runs parallel edge sampling.
 * `compare_parallel_wedge.sh`: Runs parallel wedge sampling.
 
 Run `python print_table.py` in the `src` directory to print the table of results.
+
+### Complete Example
+Suppose we want to run the deterministic and parallel edge sampling algorithms on the `tags-stack-overflow` dataset for `k = 1000`. Suppose the dataset is stored in the `../../data/` directory and we want to store the output in the `../../output/` directory. Then, run the following in the `src/cpp` directory:
+* Compile: `make clean && make all`
+* Convert simplicial data to binary format and store it as `../../data/binaries/tags-stack-overflow.binary`: `./convert_data -filename=../../data/tags-stack-overflow/tags-stack-overflow -format=simplicial -binary_path=../../data/binaries/tags-stack-overflow`
+* Run deterministic algorithms and save the output in the `../../output/compare_deterministic_1000` directory: `./compare_deterministic -filename=../../data/binaries/tags-stack-overflow.binary -binary=true -k=1000 &> ../../output/compare_deterministic_1000/tags-stack-overflow`
+* Run edge sampling algorithm from 0.4 to 2 seconds at an interval of 0.4 seconds and save the output in the `../../output/compare_parallel_edge_1000` directory: `./compare_parallel_sampling -filename=../../data/binaries/tags-stack-overflow.binary -binary=true -k=1000 -sampler=edge -start_time=0.4 -end_time=2.0 -increment=0.4 &> ../../output/compare_parallel_edge_1000/tags-stack-overlow`
