@@ -2,7 +2,7 @@
 
 This code accompanies the paper
 
-* **TODO**: Cite paper here.
+* [Retrieving Top Weighted Triangles in Graphs](https://arxiv.org/pdf/1910.00692.pdf). Raunak Kumar, Paul Liu, Moses Charikar, Austin R. Benson. Under submission.
 
 ## Requirements
 
