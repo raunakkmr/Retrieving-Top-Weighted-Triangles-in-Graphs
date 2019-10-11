@@ -2,7 +2,7 @@
 
 This code accompanies the paper
 
-* [Retrieving Top Weighted Triangles in Graphs](https://arxiv.org/pdf/1910.00692.pdf). Raunak Kumar, Paul Liu, Moses Charikar, Austin R. Benson. Under submission.
+* [Retrieving Top Weighted Triangles in Graphs](https://arxiv.org/pdf/1910.00692.pdf). Raunak Kumar, Paul Liu, Moses Charikar, Austin R. Benson. To appear in the Proceedings of the 13th ACM International Conference on Web Search and Data Mining (WSDM). 2020.
 
 ## Requirements
 
